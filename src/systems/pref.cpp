@@ -105,6 +105,7 @@ enum class PrefId : u16 {
     SegmentTimerOptions = 85,
     ShowDeathCounter = 86,
     CountFirstStageDeaths = 87,
+    MenuAcceleration = 88,  // check with rehtrop if 88 is free
 };
 
 // Verbatim list of preference IDs we iterate over when writing savefile back out
@@ -193,6 +194,7 @@ static const PrefId s_pref_ids[] = {
     PrefId::SegmentTimerOptions,
     PrefId::ShowDeathCounter,
     PrefId::CountFirstStageDeaths,
+    PrefId::MenuAcceleration,
 };
 
 static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
@@ -299,6 +301,8 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::ShowDeathCounter;
         case PrefId::CountFirstStageDeaths:
             return BoolPref::CountFirstStageDeaths;
+        case PrefId::MenuAcceleration:
+            return BoolPref::MenuAcceleration;
         default:
             return {};
     }

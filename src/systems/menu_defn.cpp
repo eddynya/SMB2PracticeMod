@@ -1274,6 +1274,14 @@ static Widget s_tools_widgets[] = {
                 .pref = pref::BoolPref::DebugMode,
             },
     },
+    {
+        .type = WidgetType::Checkbox,
+        .checkbox =
+            {
+                .label = "Menu Acceleration",
+                .pref = pref::BoolPref::MenuAcceleration,
+            },
+    },
 };
 
 static Widget s_reset_ilmark_widgets[] = {
