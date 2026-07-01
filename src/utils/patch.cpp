@@ -41,6 +41,12 @@ u32 write_word(void* ptr, u32 data) {
     return orig_word;
 }
 
+u32 view_word(void* ptr) {
+    u32* p = reinterpret_cast<u32*>(ptr);
+    u32 orig_word = *p;
+    return orig_word;
+}
+
 u32 write_nop(void* ptr) { return write_word(ptr, 0x60000000); }
 
 void hook_function_internal(void* func, void* dest) {
