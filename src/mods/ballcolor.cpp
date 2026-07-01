@@ -95,10 +95,11 @@ void init() {
 void tick() {
     BallColorType ball_type = BallColorType(pref::get(pref::U8Pref::BallColorType));
 
-    // dont change color if in story mode menu
-    if (mkb::main_mode != mkb::MD_GAME || (mkb::sub_mode == mkb::SMD_GAME_SCENARIO_INIT ||
-                                           mkb::sub_mode == mkb::SMD_GAME_SCENARIO_MAIN ||
-                                           mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN)) {
+    // dont change color if in story mode menu, but allow custom colors when viewing replays
+    if ((mkb::main_mode != mkb::MD_GAME && mkb::main_mode != mkb::MD_EXOPT) ||
+        (mkb::sub_mode == mkb::SMD_GAME_SCENARIO_INIT ||
+         mkb::sub_mode == mkb::SMD_GAME_SCENARIO_MAIN ||
+         mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN)) {
         *reinterpret_cast<mkb::GXColor*>(0x80472a34) = s_default_color;
         return;
     }
