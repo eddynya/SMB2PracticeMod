@@ -32,6 +32,7 @@
 #include "mods/iw.h"
 #include "mods/jump.h"
 #include "mods/marathon.h"
+#include "mods/menu_accel.h"
 #include "mods/physics.h"
 #include "mods/savest_ui.h"
 #include "mods/scratch.h"
@@ -136,6 +137,7 @@ void init() {
         inputdisp::tick();
         gotostory::tick();
         cmseg::tick();
+        menu_accel::tick();
         banans::tick();
         marathon::tick();
         ballcolor::tick();
