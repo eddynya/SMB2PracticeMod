@@ -53,60 +53,28 @@ void reset_timer() {
     }
 }
 
-// Note: mkb::get_world_unbeaten_stage_count() only increments after the game scenario return
+// Some notes
+// (1) mkb::get_world_unbeaten_stage_count() only increments after the game scenario return
 // submode finishes
-u16 get_total_cleared_stages() {
-    u16 sum = 0;
-    for (u16 k = 0; k < WORLD_COUNT; k++) {
-        sum += mkb::get_world_unbeaten_stage_count(k);
-    }
-    return sum;
-}
-
-/*
-u16 get_clear_count_for_world() {
-    u16 total_clears = get_total_cleared_stages();
-    return total_clears % STAGES_PER_WORLD;
-} */
-
-// Note that after completing a world, this function
-// returns 10 until the 10 ball screen of the next world (at which
-// point it reverts to 0)
+// (2) After completing a world, this function returns a value of 10 until the 10 ball screen
+// of the next world (at which point it reverts to 0)
 u16 get_clear_count_for_world() {
     return mkb::get_world_unbeaten_stage_count(mkb::scen_info.world);
 }
 
-// Importantly, we don't increment the timer on the 10 ball screen after selecting a stage
-// We also need to be careful about accessing mkb::g_storymode_stageselect_state when main_game.rel
-// is not loaded, so we guard it with a sub_mode + scen_info check
-bool is_pre_selection_on_10_ball_screen() {
-    if (mode::is_on_10_ball_screen(mkb::sub_mode, mkb::scen_info)) {
-        // the 10 ball spin in check doesn't catch the first frame of a world
-        return mode::is_on_10_ball_spin_in(mkb::g_storymode_stageselect_state) ||
-               mode::is_idle_on_10_ball_screen(mkb::g_storymode_stageselect_state) ||
-               mode::is_first_frame_of_world(mkb::scen_info);
-    }
-    return false;
-}
-
-// On the last stage of a world, we stop the segment timer early (ie on tape break)
-bool should_run_segment_timer_on_last_stage_of_world() {
-    return (mode::is_on_stage(mkb::sub_mode) || mode::is_story_exit_game(mkb::sub_mode)) &&
-           !validate::has_entered_goal();
-}
-
-// Places where the segment timer for a world should run
-bool should_segment_timer_run(int world_idx) {
+// Places where the segment timer should run while we're on a stage
+bool should_segment_timer_run_on_stage(int world_idx) {
     if (mkb::get_world_unbeaten_stage_count(world_idx) < STAGES_PER_WORLD - 1) {
         return true;
     } else if (mkb::get_world_unbeaten_stage_count(world_idx) == STAGES_PER_WORLD - 1) {
-        return is_pre_selection_on_10_ball_screen() ||
-               should_run_segment_timer_on_last_stage_of_world();
+        // Stop the world segment timer on tape break of the last stage of that world
+        return !validate::has_entered_goal();
     } else {
         return false;
     }
 }
 
+// Importantly, we don't increment the timer on the 10 ball screen after selecting a stage
 // To properly increment the timer on the 10 ball screen, we run this
 // update function inside a hook for mkb::g_handle_storymode_stageselect_state
 void update_timers_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
@@ -115,21 +83,23 @@ void update_timers_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
             if (mode::is_on_10_ball_spin_in(state) || mode::is_idle_on_10_ball_screen(state) ||
                 mode::has_selected_stage_on_10_ball_screen_init(state)) {
                 s_timer_group[k].full_world += 1;
+                s_timer_group[k].segment = s_timer_group[k].full_world;
             }
         }
     }
 }
 
-void update_timers() {
+void update_timers_on_stage() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         if (mkb::scen_info.world == k) {  // World (k+1)'s timer
             if (mode::is_on_stage_with_endpoints(mkb::sub_mode) ||
                 mode::is_story_exit_game(mkb::sub_mode)) {  // include extra game scenario return?
-                s_timer_group[k].full_world += 1;
-            }
 
-            if (should_segment_timer_run(k)) {
-                s_timer_group[k].segment = s_timer_group[k].full_world;
+                s_timer_group[k].full_world += 1;
+
+                if (should_segment_timer_run_on_stage(k)) {
+                    s_timer_group[k].segment = s_timer_group[k].full_world;
+                }
             }
         }
     }
@@ -142,26 +112,11 @@ void tick() {
         reset_timer();
     }
 
-    update_timers();
+    update_timers_on_stage();
 }
 
 // cutscene submodes
 // 249, 247, 248, 94
-/*
- if ((clear_count % STAGES_PER_WORLD == 9) && mode::is_postgoal(mkb::sub_mode)) {
-        return true;
-    } else if ((clear_count % STAGES_PER_WORLD == 0 &&
-                mode::is_on_10_ball_screen(mkb::sub_mode, mkb::scen_info))) {
-        // We want this function to return true during the cutscene between worlds, so only return
-        // false when we properly enter the next world's 10 ball screen
-        return false;
-    } else if (clear_count % STAGES_PER_WORLD != 0) {
-        return false;
-    }
-    return false;
-*/
-
-// (world_clear_count == 9) && mode::is_postgoal(mkb::sub_mode)
 
 // maybe move the next 2 functions to mode.cpp so deathcounter can also use them?
 bool is_between_worlds() {
@@ -218,7 +173,6 @@ bool should_display_timer(TimerType type) {
 }
 
 u32 get_split_timer_for_world(int world_idx) {
-    // TODO: world start correction?
     u32 prev_world_sum = 0;
     for (u16 k = 0; k < world_idx; k++) {
         prev_world_sum += s_timer_group[k].full_world;
@@ -323,18 +277,18 @@ void disp() {
         draw_breakdown_screen();
     }
 
+    /*
     u16 pos_y = get_timer_y_pos(TimerType::Segment);
-    // mkb::scen_info.mode
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Dbg:", 60 * s_counter, true, draw::WHITE);
+
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
+                          "Dbg:", 60 * s_counter, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
+                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
                           "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE);
-    /* timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Dbg:", 60 * s_counter, true, draw::WHITE); */
+    */
 }
 
 // for easier timer testing

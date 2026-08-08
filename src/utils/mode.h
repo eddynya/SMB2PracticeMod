@@ -54,8 +54,6 @@ bool is_pre_selection_on_10_ball_screen(mkb::SubMode submode, mkb::ScenInfo scen
 bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode,
                          mkb::ScenInfo scene_info);
 
-bool is_first_frame_of_world(mkb::ScenInfo scen_info);
-
 bool is_storymode_file_screen_init(mkb::ScenInfo scen_info);
 bool is_storymode_file_screen(mkb::ScenInfo scen_info);
 bool is_storymode_name_entry_screen(mkb::ScenInfo scen_info);

@@ -228,12 +228,14 @@ bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode
     return false;
 }
 
+/*
 bool is_first_frame_of_world(mkb::ScenInfo scen_info) {
     // DMD_SCEN_SEL_WORLD_INIT is the first frame of world 1, and
     // DMD_SCEN_SEL_WORLD_NEXT is the first frame of all subsequent worlds
     return scen_info.mode == mkb::DMD_SCEN_SEL_WORLD_INIT ||
            scen_info.mode == mkb::DMD_SCEN_SEL_WORLD_NEXT;
 }
+*/
 
 /*
 bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::ScenInfo scene_info) {
