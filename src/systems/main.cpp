@@ -33,6 +33,7 @@
 #include "mods/jump.h"
 #include "mods/marathon.h"
 #include "mods/menu_accel.h"
+#include "mods/old_storytimer.h"
 #include "mods/physics.h"
 #include "mods/savest_ui.h"
 #include "mods/scratch.h"
@@ -127,6 +128,7 @@ void init() {
         cardio::tick();
         unlock::tick();
         iw::tick();
+        // old_storytimer::tick();
         storytimer::tick();
         deathcounter::tick();
         savest_ui::tick();
@@ -170,6 +172,7 @@ void init() {
         draw::predraw();
         timer::disp();
         iw::disp();
+        // old_storytimer::disp();
         storytimer::disp();
         deathcounter::disp();
         Tetris::get_instance().disp();

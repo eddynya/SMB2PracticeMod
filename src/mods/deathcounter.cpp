@@ -3,7 +3,7 @@
 #include "mkb/mkb.h"
 
 #include "mods/freecam.h"
-#include "mods/storytimer.h"
+#include "mods/old_storytimer.h"
 #include "mods/validate.h"
 #include "systems/assembly.h"
 #include "systems/pad.h"
@@ -29,7 +29,7 @@ void tick() {
         if (pref::get(pref::BoolPref::CountFirstStageDeaths)) {
             s_can_die = true;
         } else if (!pref::get(pref::BoolPref::CountFirstStageDeaths) &&
-                   storytimer::get_completed_stagecount() != 0) {
+                   old_storytimer::get_completed_stagecount() != 0) {
             s_can_die = true;
         }
     } else if (validate::has_entered_goal()) {
