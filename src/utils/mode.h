@@ -16,6 +16,7 @@ bool is_gameplay(mkb::SubMode submode);
 bool is_goal_init(mkb::SubMode submode);
 bool is_postgoal(mkb::SubMode submode);
 bool is_postgoal_replay(mkb::SubMode submode);
+bool is_postgoal_with_game_return(mkb::SubMode submode);
 
 bool is_story_retry_screen(mkb::SubMode submode);
 bool is_death_init(mkb::SubMode submode);
@@ -23,6 +24,7 @@ bool is_death_submode(mkb::SubMode submode);
 bool is_timed_death_submode(mkb::SubMode submode);
 
 bool is_on_stage(mkb::SubMode submode);
+bool is_on_stage_with_endpoints(mkb::SubMode submode);
 
 // other submodes
 
@@ -51,6 +53,8 @@ bool is_pre_selection_on_10_ball_screen(mkb::SubMode submode, mkb::ScenInfo scen
                                         mkb::StoryModeStageSelectState state);
 bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode,
                          mkb::ScenInfo scene_info);
+
+bool is_first_frame_of_world(mkb::ScenInfo scen_info);
 
 bool is_storymode_file_screen_init(mkb::ScenInfo scen_info);
 bool is_storymode_file_screen(mkb::ScenInfo scen_info);

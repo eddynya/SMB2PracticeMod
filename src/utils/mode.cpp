@@ -46,6 +46,10 @@ bool is_postgoal(mkb::SubMode submode) {
     return is_postgoal_pre_replay(submode) || is_postgoal_replay(submode);
 }
 
+bool is_postgoal_with_game_return(mkb::SubMode submode) {
+    return is_postgoal(submode) || submode == mkb::SMD_GAME_SCENARIO_RETURN;
+}
+
 bool is_goal_init(mkb::SubMode submode) { return submode == mkb::SMD_GAME_GOAL_INIT; }
 
 // --- death submodes ---
@@ -84,6 +88,11 @@ bool is_on_stage(mkb::SubMode submode) {
 
 bool is_on_stage_with_first_init(mkb::SubMode submode) {
     return (is_spin_in_first_init(submode) || is_on_stage(submode));
+}
+
+bool is_on_stage_with_endpoints(mkb::SubMode submode) {
+    return (is_spin_in_first_init(submode) || is_on_stage(submode) ||
+            is_game_scenario_return(submode));
 }
 
 // --- menu submodes ---
@@ -217,6 +226,13 @@ bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode
                 is_story_exit_game(sub_mode));
     }
     return false;
+}
+
+bool is_first_frame_of_world(mkb::ScenInfo scen_info) {
+    // DMD_SCEN_SEL_WORLD_INIT is the first frame of world 1, and
+    // DMD_SCEN_SEL_WORLD_NEXT is the first frame of all subsequent worlds
+    return scen_info.mode == mkb::DMD_SCEN_SEL_WORLD_INIT ||
+           scen_info.mode == mkb::DMD_SCEN_SEL_WORLD_NEXT;
 }
 
 /*
