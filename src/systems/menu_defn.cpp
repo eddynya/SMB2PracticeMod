@@ -832,6 +832,14 @@ static Widget s_loadless_timers_widgets[] = {
                 .pref = pref::U8Pref::SegmentTimerOptions,
             },
     },
+    {
+        .type = WidgetType::Checkbox,
+        .checkbox =
+            {
+                .label = "Show Run Breakdown",
+                .pref = pref::BoolPref::ShowRunBreakdown,
+            },
+    },
 };
 
 static Widget s_deathcounter_widgets[] = {

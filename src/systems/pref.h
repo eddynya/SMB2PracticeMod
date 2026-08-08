@@ -56,6 +56,7 @@ enum class BoolPref : u8 {
     JumpChangePhysics,
     JumpAllowWalljumps,
     CustomPhysicsDisp,
+    ShowRunBreakdown,
     ShowDeathCounter,
     CountFirstStageDeaths,
     MenuAcceleration,

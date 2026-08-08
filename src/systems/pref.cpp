@@ -103,9 +103,10 @@ enum class PrefId : u16 {
     CustomPhysicsDisp = 83,
     FullgameTimerOptions = 84,
     SegmentTimerOptions = 85,
-    ShowDeathCounter = 86,
-    CountFirstStageDeaths = 87,
-    MenuAcceleration = 88,  // check with rehtrop if 88 is free
+    ShowRunBreakdown = 86,
+    ShowDeathCounter = 87,
+    CountFirstStageDeaths = 88,
+    MenuAcceleration = 89,  // check with rehtrop if 88 is free
 };
 
 // Verbatim list of preference IDs we iterate over when writing savefile back out
@@ -192,6 +193,7 @@ static const PrefId s_pref_ids[] = {
     PrefId::CustomPhysicsDisp,
     PrefId::FullgameTimerOptions,
     PrefId::SegmentTimerOptions,
+    PrefId::ShowRunBreakdown,
     PrefId::ShowDeathCounter,
     PrefId::CountFirstStageDeaths,
     PrefId::MenuAcceleration,
@@ -303,6 +305,8 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::CountFirstStageDeaths;
         case PrefId::MenuAcceleration:
             return BoolPref::MenuAcceleration;
+        case PrefId::ShowRunBreakdown:
+            return BoolPref::ShowRunBreakdown;
         default:
             return {};
     }
@@ -396,6 +400,7 @@ static BoolPref s_default_on_bool_prefs[] = {
     BoolPref::JumpChangePhysics,
     BoolPref::JumpAllowWalljumps,
     BoolPref::CustomPhysicsDisp,
+    BoolPref::ShowRunBreakdown,
     BoolPref::CountFirstStageDeaths,
 };
 
