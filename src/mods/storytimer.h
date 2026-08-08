@@ -4,7 +4,7 @@
 
 namespace storytimer {
 
-void init();
+void init_main_loop();
 void tick();
 void disp();
 

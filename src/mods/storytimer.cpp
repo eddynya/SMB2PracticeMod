@@ -36,20 +36,19 @@ constexpr u16 FULLGAME_TIMER_LOCATION_X = 18 + 24;
 constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 56;
 constexpr u16 SEGMENT_TIMER_LOCATION_X = 30 + 24;
 constexpr u16 SEGMENT_TIMER_TEXT_OFFSET = 44;
-constexpr u16 IW_TIME_LOCATION_X = 42 + 24;  // why is it named this bro what was i doing
+constexpr u16 BREAKDOWN_ROW_LOCATION_X = 42 + 24;
 constexpr u16 STARTING_ROW = 2;
 
-static constexpr s32 WORLD_COUNT = 10;
-static constexpr s32 STAGES_PER_WORLD = 10;
+constexpr u16 WORLD_COUNT = 10;
+constexpr u16 STAGES_PER_WORLD = 10;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // each world has its own TimerGroup structure
 
-// static s32 s_completed_stages;  // the completed stages for the whole run
-
-// u32 get_completed_stagecount() { return s_completed_stages; }
+static u32 s_counter = 0;  // for testing
 
 void reset_timer() {
-    for (s32 k = 0; k < WORLD_COUNT; k++) {
+    s_counter = 0;  // debugging
+    for (u16 k = 0; k < WORLD_COUNT; k++) {
         s_timer_group[k] = {};
     }
 }
@@ -108,18 +107,24 @@ bool should_segment_timer_run(int world_idx) {
     }
 }
 
-// TODO: game first init
-/*
-mode::is_on_stage_with_endpoints(mkb::sub_mode) ||
-                mode::is_story_exit_game(mkb::sub_mode) ||
-*/
-// load outs currently 2f (not 1f) behind old loadless timer?
+// To properly increment the timer on the 10 ball screen, we run this
+// update function inside a hook for mkb::g_handle_storymode_stageselect_state
+void update_timers_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
+    for (u16 k = 0; k < WORLD_COUNT; k++) {
+        if (mkb::scen_info.world == k) {  // World (k+1)'s timer
+            if (mode::is_on_10_ball_spin_in(state) || mode::is_idle_on_10_ball_screen(state) ||
+                mode::has_selected_stage_on_10_ball_screen_init(state)) {
+                s_timer_group[k].full_world += 1;
+            }
+        }
+    }
+}
+
 void update_timers() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         if (mkb::scen_info.world == k) {  // World (k+1)'s timer
             if (mode::is_on_stage_with_endpoints(mkb::sub_mode) ||
-                mode::is_story_exit_game(mkb::sub_mode) ||
-                is_pre_selection_on_10_ball_screen()) {  // include extra game scenario return?
+                mode::is_story_exit_game(mkb::sub_mode)) {  // include extra game scenario return?
                 s_timer_group[k].full_world += 1;
             }
 
@@ -130,12 +135,6 @@ void update_timers() {
     }
 }
 
-/* if (get_total_cleared_stages() % STAGES_PER_WORLD != 9 &&
-                mode::is_game_scenario_return(mkb::sub_mode)) {
-                // is mkb::get_world_unbeaten_stage_count(k) != 9 easier to read?
-                s_timer_group[k].full_world += 1;  // +=2 to make timer look nicer?
-            } */
-
 void tick() {
     // reset the timer on the file select screen and the name entry screen
     if (mode::is_storymode_file_screen(mkb::scen_info) ||
@@ -144,92 +143,6 @@ void tick() {
     }
 
     update_timers();
-    /*
-        u32 sum = 0;
-        for (s32 k = 0; k < WORLD_COUNT; k++) {
-            sum += mkb::get_world_unbeaten_stage_count(k);
-        }
-        s_completed_stages = sum;
-
-        // for later, it's useful to record what submodes correspond to spin in, gameplay, etc.
-
-        // submodes during spin in
-        bool is_on_spin_in =
-            (mkb::sub_mode == mkb::SMD_GAME_FIRST_INIT || mkb::sub_mode == mkb::SMD_GAME_READY_INIT
-       || mkb::sub_mode == mkb::SMD_GAME_READY_MAIN);
-
-        // submodes during gameplay
-        bool is_on_gameplay =
-            (mkb::sub_mode == mkb::SMD_GAME_PLAY_INIT || mkb::sub_mode == mkb::SMD_GAME_PLAY_MAIN);
-
-        // submodes entered when exiting game
-        bool is_on_exit_game = (mkb::sub_mode == mkb::SMD_GAME_INTR_SEL_INIT ||
-                                mkb::sub_mode == mkb::SMD_GAME_INTR_SEL_MAIN ||
-                                mkb::sub_mode == mkb::SMD_GAME_SUGG_SAVE_INIT ||
-                                mkb::sub_mode == mkb::SMD_GAME_SUGG_SAVE_MAIN);
-
-        // submodes entered when breaking the goal tape
-        bool is_postgoal =
-            (mkb::sub_mode == mkb::SMD_GAME_GOAL_INIT || mkb::sub_mode == mkb::SMD_GAME_GOAL_MAIN ||
-             mkb::sub_mode == mkb::SMD_GAME_GOAL_REPLAY_INIT ||
-             mkb::sub_mode == mkb::SMD_GAME_GOAL_REPLAY_MAIN ||
-             mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN);
-
-        // submodes for the fallout and y/n screen
-        bool is_on_fallout =
-            (mkb::sub_mode == mkb::SMD_GAME_RINGOUT_INIT ||
-             mkb::sub_mode == mkb::SMD_GAME_RINGOUT_MAIN || mkb::sub_mode ==
-       mkb::SMD_GAME_RETRY_INIT || mkb::sub_mode == mkb::SMD_GAME_RETRY_MAIN);
-
-        // submodes during timeover
-        bool is_timeover = (mkb::sub_mode == mkb::SMD_GAME_TIMEOVER_INIT ||
-                            mkb::sub_mode == mkb::SMD_GAME_TIMEOVER_MAIN);
-
-        // stage select states on the 10 ball screen *not* including the transition after the a
-       press
-        // input. this transition is not included in the timer because even ignoring completely
-       white
-        // frames, the time spent on mkb::g_storymode_stageselect_state == mkb::STAGE_SELECTED can
-       be
-        // highly variable (up to over 40 frames sometimes!), so for the purpose of a loadless
-        // timer, it makes sense to cut this out
-        bool is_pre_load_in_stage_select =
-            (mkb::g_storymode_stageselect_state == mkb::STAGE_SELECT_INTRO_SEQUENCE ||
-             mkb::g_storymode_stageselect_state == 3 ||
-             mkb::g_storymode_stageselect_state == mkb::STAGE_SELECT_IDLE);
-        */
-
-    /*
-        for (s32 k = 0; k < WORLD_COUNT; k++) {
-            if (mkb::scen_info.world == k) {
-                if (is_on_spin_in || is_on_exit_game || is_on_fallout || is_timeover ||
-                    is_on_gameplay || is_postgoal || is_pre_load_in_stage_select) {
-                    // increment the timer during every frame on spin in, exit game, fallout,
-                    // timeover, gameplay, and every frame after breaking the tape until (but not
-                    // including) the load back to the 10 ball screen. In addition, increment the
-       timer
-                    // on every frame on the 10 ball screen until the a press input
-                    s_timer_group[k].full_world += 1;
-                }
-                if (s_completed_stages % STAGES_PER_WORLD != 9 &&
-                    mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN) {
-                    // need to add 1 frame to the timer when stage selecting to the 10 ball screen
-                    // since the first non-completely white frame is not included in
-                    // mkb::STAGE_SELECT_INTRO_SEQUENCE; don't include the last stage of a world
-                    // since that missing frame is handled by the world start correction
-                    s_timer_group[k].full_world += 1;
-                }
-                if (mkb::get_world_unbeaten_stage_count(k) < 9 ||
-                    (mkb::get_world_unbeaten_stage_count(k) == 9 &&
-                     (is_pre_load_in_stage_select || is_on_spin_in ||
-       !validate::has_entered_goal()))) {
-                    // stop incrementing the segment timer once the tape is broken on the last stage
-       of
-                    // the world
-                    s_timer_group[k].segment = s_timer_group[k].full_world;
-                }
-            }
-        } */
 }
 
 // cutscene submodes
@@ -252,26 +165,16 @@ void tick() {
 
 // maybe move the next 2 functions to mode.cpp so deathcounter can also use them?
 bool is_between_worlds() {
-    // u16 clear_count = get_total_cleared_stages();
     u16 world_clear_count = get_clear_count_for_world();
     if ((world_clear_count == STAGES_PER_WORLD - 1) && validate::has_entered_goal()) {
         return true;
     } else if (world_clear_count == STAGES_PER_WORLD) {
-        // mode::is_story_cutscene(mkb::sub_mode)
         return true;
     }
     return false;
 }
 
-// && mode::is_postgoal(mkb::sub_mode))
-bool is_run_complete() {
-    if (mkb::scen_info.world == WORLD_COUNT - 1) {
-        return (get_clear_count_for_world() == STAGES_PER_WORLD - 1 &&
-                validate::has_entered_goal()) ||
-               get_clear_count_for_world() == STAGES_PER_WORLD;
-    }
-    return false;
-}
+bool is_run_complete() { return (mkb::scen_info.world == WORLD_COUNT - 1) && is_between_worlds(); }
 
 // The run breakdown screen replaces the segment timer at the end of the run
 // if the pref for it is on
@@ -287,34 +190,27 @@ bool should_display_timer(TimerType type) {
         case TimerOptions::AlwaysShow:
             if (type == TimerType::Fullgame) {
                 return true;
-            } else {
-                if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                    return !is_run_complete();
-                } else {
-                    return true;
-                }
+            } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
+                // type is segment timer + show breakdown on
+                return !is_run_complete();
+            } else {  // type is segment timer + show breakdown off
+                return true;
             }
         case TimerOptions::BetweenWorlds:
-            // return is_between_worlds();
             if (type == TimerType::Fullgame) {
                 return is_between_worlds();
+            } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
+                return is_between_worlds() && !is_run_complete();
             } else {
-                if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                    return is_between_worlds() && !is_run_complete();
-                } else {
-                    return is_between_worlds();
-                }
+                return is_between_worlds();
             }
         case TimerOptions::EndOfRun:
-            // return is_run_complete();
             if (type == TimerType::Fullgame) {
                 return is_run_complete();
+            } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
+                return false;
             } else {
-                if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                    return false;
-                } else {
-                    return is_run_complete();
-                }
+                return is_run_complete();
             }
         case TimerOptions::DontShow:
             return false;
@@ -389,7 +285,7 @@ Vec2d get_breakdown_row_position(u16 row) {
     u16 starting_row = get_timer_y_pos(TimerType::Segment);
     u16 pos_y = timerdisp::row_number_to_vertical_pos(starting_row + row);
     if (row < WORLD_COUNT - 1) {
-        return {IW_TIME_LOCATION_X, pos_y};
+        return {BREAKDOWN_ROW_LOCATION_X, pos_y};
     } else {  // "W10" takes up more space than "Wk" for "1 <= k <= 9"
         return {SEGMENT_TIMER_LOCATION_X, pos_y};
     }
@@ -416,7 +312,8 @@ void draw_breakdown_screen() {  // TODO: death count per world
 void disp() {
     if ((mkb::main_game_mode != mkb::STORY_MODE && mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_INIT &&
          mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_MAIN) ||
-        freecam::should_hide_hud()) {
+        freecam::should_hide_hud()) {  // TODO: don't include file init because the previous run's
+                                       // breakdown screen shows up there
         return;
     }
 
@@ -425,64 +322,44 @@ void disp() {
     if (pref::get(pref::BoolPref::ShowRunBreakdown) && is_run_complete()) {
         draw_breakdown_screen();
     }
-    /*
-        // mkb::scen_info.mode
-        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 2, SEGMENT_TIMER_TEXT_OFFSET,
-                              "Dbg:", 60 * s_timer_group[0].full_world, true, draw::WHITE);
-        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 3, SEGMENT_TIMER_TEXT_OFFSET,
-                              "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
-        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 4, SEGMENT_TIMER_TEXT_OFFSET,
-                              "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
-        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 5, SEGMENT_TIMER_TEXT_OFFSET,
-                              "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE); */
 
-    //
-    // --- old stuff (will comment out/remove) ---
-    //
-
-    // at the start of each world, we need to correct the timer by 1 frame
-    u32 full_world[10] = {};
-    u32 segment[10] = {};
-
-    for (s32 k = 0; k < WORLD_COUNT; k++) {
-        if (s_timer_group[k].full_world > 0) {
-            // don't apply the correction until the world actually starts
-            full_world[k] = s_timer_group[k].full_world + 1;
-            segment[k] = s_timer_group[k].segment + 1;
-        }
-    }
-
-    // split[k] is just the fullgame time at tape break on the last stage of world k;
-    // to calculate this, just add full_world[j] (j<k) for the previous worlds to the
-    // current world's segment timer
-    u32 sum[WORLD_COUNT] = {};
-    u32 split[WORLD_COUNT] = {};
-    for (s32 k = 1; k < WORLD_COUNT; k++) {
-        for (s32 j = 0; j < k; j++) {
-            sum[k] += full_world[j];
-        }
-        split[k] = sum[k] + segment[k];
-    }
-    split[0] = segment[0];
-    u32 loadless_story_timer = split[9];
+    u16 pos_y = get_timer_y_pos(TimerType::Segment);
+    // mkb::scen_info.mode
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Dbg:", 60 * s_counter, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE);
+    /* timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Dbg:", 60 * s_counter, true, draw::WHITE); */
 }
 
-//  void dmd_scen_sel_world_init(void);
-//  void dmd_scen_sel_world_next(void);
-static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_init)> s_dmd_scen_sel_world_init_tramp;
-static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_next)> s_dmd_scen_sel_world_next_tramp;
+// for easier timer testing
+static patch::Tramp<decltype(&mkb::fade_screen_to_color)> s_fade_screen_to_color_tramp;
+static patch::Tramp<decltype(&mkb::g_handle_storymode_stageselect_state)>
+    s_g_handle_storymode_stageselect_state_tramp;
 
-void init() {
-    patch::hook_function(s_dmd_scen_sel_world_init_tramp, mkb::dmd_scen_sel_world_init, []() {
-        // s_timer_group[0].full_world += 1;
-        // while (true);
-        s_dmd_scen_sel_world_init_tramp.dest();
-    });
+void init_main_loop() {
+    patch::hook_function(s_fade_screen_to_color_tramp, mkb::fade_screen_to_color,
+                         [](mkb::uint flags, u32 color, mkb::uint frames) {
+                             // don't run for testing purposes
+                             if (mode::is_game_scenario_main(mkb::sub_mode)) {
+                                 // s_fade_screen_to_color_tramp.dest(flags, color, frames);
+                             }
+                         });
+    patch::hook_function(s_g_handle_storymode_stageselect_state_tramp,
+                         mkb::g_handle_storymode_stageselect_state, []() {
+                             s_g_handle_storymode_stageselect_state_tramp.dest();
 
-    patch::hook_function(s_dmd_scen_sel_world_next_tramp, mkb::dmd_scen_sel_world_next, []() {
-        // s_timer_group[0].full_world += 1;
-        s_dmd_scen_sel_world_next_tramp.dest();
-    });
+                             update_timers_on_10_ball_screen(mkb::g_storymode_stageselect_state);
+
+                             if (mkb::g_storymode_stageselect_state == 2) {
+                                 s_counter += 1;
+                             }
+                         });
 }
 
 }  // namespace storytimer

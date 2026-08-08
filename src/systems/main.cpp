@@ -207,6 +207,7 @@ void init() {
                     // deathcounter::on_goal_entry();
                 });
                 jump::patch_minimap();
+                storytimer::init_main_loop();
             }
             // Sel_ngc init functions
             // else if (relutil::ModuleId(rel_buffer->info.id) == relutil::ModuleId::SelNgc) {
