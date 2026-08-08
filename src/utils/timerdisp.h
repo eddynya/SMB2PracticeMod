@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mkb/mkb.h"
+#include "../mkb/mkb.h"
 
 namespace timerdisp {
 
@@ -20,6 +20,7 @@ enum class TimeFormatType {
     ALWAYS_LEAD_NON_HOURS  // mm:ss.cc if < 1 hour, ss.cc if < 1 min
 };
 
+s32 row_number_to_vertical_pos(u32 row_num);
 void draw_timer(u32 pos_x, u32 pos_y, u32 text_offset, const char* prefix, s32 frames_1,
                 bool show_seconds_only, mkb::GXColor color);
 void draw_subtick_timer(s32 frames, const char* prefix, u32 row, mkb::GXColor color,

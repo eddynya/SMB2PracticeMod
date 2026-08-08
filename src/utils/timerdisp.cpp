@@ -1,6 +1,7 @@
 #include "timerdisp.h"
 
-#include "utils/draw.h"
+#include "../mkb/mkb.h"
+#include "../utils/draw.h"
 
 namespace timerdisp {
 
@@ -10,6 +11,8 @@ static constexpr u32 HOUR_FRAMES = MINUTE_FRAMES * 60;
 
 static constexpr s32 X = 378;
 static constexpr s32 Y = 24;
+
+s32 row_number_to_vertical_pos(u32 row_num) { return Y + 16 * row_num; }
 
 void draw_timer(u32 pos_x, u32 pos_y, u32 text_offset, const char* prefix, s32 frames,
                 bool show_seconds_only, mkb::GXColor color) {
@@ -24,7 +27,7 @@ void draw_timer(u32 pos_x, u32 pos_y, u32 text_offset, const char* prefix, s32 f
 
     s32 A = pos_x;
     s32 a = A + text_offset;
-    s32 b = Y + (pos_y)*16;
+    s32 b = row_number_to_vertical_pos(pos_y);
 
     if (hours > 0 && !show_seconds_only) {
         draw::debug_text(A, b, color, prefix);
