@@ -70,4 +70,70 @@ void draw_percentage(s32 fsave, const char* prefix, u32 row, mkb::GXColor color)
     draw::debug_text(X + 48, y, color, "%2d%", fsave);
 }
 
+TimeComp format_time(u32 time) {  // input time in frames
+    u32 time_hours = time / HOUR_FRAMES;
+    u32 time_minutes = time % HOUR_FRAMES / MINUTE_FRAMES;
+    u32 time_seconds = time % MINUTE_FRAMES / SECOND_FRAMES;
+    u32 time_centiseconds = (time % SECOND_FRAMES) * 100 / 60;
+    return {time_hours, time_minutes, time_seconds, time_centiseconds};
+}
+
+void format_time_to_buffer(char* buffer, u32 time,
+                           TimeFormatType format_type) {  // time is in frames
+    TimeComp formatted_time = format_time(time);
+
+    switch (format_type) {
+        case TimeFormatType::SECONDS_ONLY: {
+            u32 seconds = time / SECOND_FRAMES;
+            u32 centiseconds = (time % SECOND_FRAMES) * 100 / 60;
+            mkb::sprintf(buffer, "%d.%02d", seconds, centiseconds);
+            break;
+        }
+        case TimeFormatType::HOURS_ALWAYS: {
+            mkb::sprintf(buffer, "%d:%02d:%02d.%02d", formatted_time.hours, formatted_time.minutes,
+                         formatted_time.seconds, formatted_time.centiseconds);
+            break;
+        }
+        case TimeFormatType::MINUTES_ALWAYS_LEADING_ZERO: {
+            if (formatted_time.hours > 0) {
+                mkb::sprintf(buffer, "%d:%02d:%02d.%02d", formatted_time.hours,
+                             formatted_time.minutes, formatted_time.seconds,
+                             formatted_time.centiseconds);
+            } else {
+                mkb::sprintf(buffer, "%02d:%02d.%02d", formatted_time.minutes,
+                             formatted_time.seconds, formatted_time.centiseconds);
+            }
+            break;
+        }
+        case TimeFormatType::MINIMAL_LEADING: {
+            if (formatted_time.hours > 0) {
+                mkb::sprintf(buffer, "%d:%02d:%02d.%02d", formatted_time.hours,
+                             formatted_time.minutes, formatted_time.seconds,
+                             formatted_time.centiseconds);
+            } else if (formatted_time.minutes > 0) {
+                mkb::sprintf(buffer, "%d:%02d.%02d", formatted_time.minutes, formatted_time.seconds,
+                             formatted_time.centiseconds);
+            } else {
+                mkb::sprintf(buffer, "%d.%02d", formatted_time.seconds,
+                             formatted_time.centiseconds);
+            }
+            break;
+        }
+        case TimeFormatType::ALWAYS_LEAD_NON_HOURS: {
+            if (formatted_time.hours > 0) {
+                mkb::sprintf(buffer, "%d:%02d:%02d.%02d", formatted_time.hours,
+                             formatted_time.minutes, formatted_time.seconds,
+                             formatted_time.centiseconds);
+            } else if (formatted_time.minutes > 0) {
+                mkb::sprintf(buffer, "%02d:%02d.%02d", formatted_time.minutes,
+                             formatted_time.seconds, formatted_time.centiseconds);
+            } else {
+                mkb::sprintf(buffer, "%02d.%02d", formatted_time.seconds,
+                             formatted_time.centiseconds);
+            }
+            break;
+        }
+    }
+}
+
 }  // namespace timerdisp
