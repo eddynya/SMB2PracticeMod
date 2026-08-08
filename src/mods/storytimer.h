@@ -4,8 +4,8 @@
 
 namespace storytimer {
 
+void init();
 void tick();
 void disp();
-u32 get_completed_stagecount();
 
 }  // namespace storytimer
