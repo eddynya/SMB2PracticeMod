@@ -27,29 +27,28 @@ enum class TimerType {
     Segment,
 };
 
-static constexpr s32 FULLGAME_TIMER_LOCATION_X = 18 + 24;
-static constexpr s32 FULLGAME_TIMER_TEXT_OFFSET = 56;
-static constexpr s32 SEGMENT_TIMER_LOCATION_X = 30 + 24;
-static constexpr s32 SEGMENT_TIMER_TEXT_OFFSET = 44;
-static constexpr s32 IW_TIME_LOCATION_X = 42 + 24;
-static constexpr s32 WORLD_COUNT = 10;
-static constexpr s32 STAGES_PER_WORLD = 10;
-static constexpr u32 SECOND_FRAMES = 60;
-static constexpr u32 MINUTE_FRAMES = SECOND_FRAMES * 60;
-static constexpr u32 HOUR_FRAMES = MINUTE_FRAMES * 60;
-
 struct TimerGroup {
     u32 segment;     // the time taken to complete a world up until tape break on the last stage
     u32 full_world;  // the time taken to complete a world until the fade to white on the last stage
 };
+
+constexpr u16 FULLGAME_TIMER_LOCATION_X = 18 + 24;
+constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 56;
+constexpr u16 SEGMENT_TIMER_LOCATION_X = 30 + 24;
+constexpr u16 SEGMENT_TIMER_TEXT_OFFSET = 44;
+constexpr u16 IW_TIME_LOCATION_X = 42 + 24;  // why is it named this bro what was i doing
+constexpr u16 STARTING_ROW = 2;
+
+static constexpr s32 WORLD_COUNT = 10;
+static constexpr s32 STAGES_PER_WORLD = 10;
+
 static TimerGroup s_timer_group[WORLD_COUNT];  // each world has its own TimerGroup structure
-static s32 s_completed_stages;                 // the completed stages for the whole run
 
-u32 get_completed_stagecount() { return s_completed_stages; }
+// static s32 s_completed_stages;  // the completed stages for the whole run
 
-// before starting the run, there are several values we zero
+// u32 get_completed_stagecount() { return s_completed_stages; }
+
 void reset_timer() {
-    // s_completed_stages = 0;
     for (s32 k = 0; k < WORLD_COUNT; k++) {
         s_timer_group[k] = {};
     }
@@ -99,9 +98,9 @@ bool should_run_segment_timer_on_last_stage_of_world() {
 
 // Places where the segment timer for a world should run
 bool should_segment_timer_run(int world_idx) {
-    if (mkb::get_world_unbeaten_stage_count(world_idx) < 9) {
+    if (mkb::get_world_unbeaten_stage_count(world_idx) < STAGES_PER_WORLD - 1) {
         return true;
-    } else if (mkb::get_world_unbeaten_stage_count(world_idx) == 9) {
+    } else if (mkb::get_world_unbeaten_stage_count(world_idx) == STAGES_PER_WORLD - 1) {
         return is_pre_selection_on_10_ball_screen() ||
                should_run_segment_timer_on_last_stage_of_world();
     } else {
@@ -249,16 +248,13 @@ void tick() {
     return false;
 */
 
-// bool is_intro_cutscene() {}
-
 // (world_clear_count == 9) && mode::is_postgoal(mkb::sub_mode)
 
-// (i will get rid of the magic numbers)
-
+// maybe move the next 2 functions to mode.cpp so deathcounter can also use them?
 bool is_between_worlds() {
     // u16 clear_count = get_total_cleared_stages();
     u16 world_clear_count = get_clear_count_for_world();
-    if ((world_clear_count == 9) && validate::has_entered_goal()) {
+    if ((world_clear_count == STAGES_PER_WORLD - 1) && validate::has_entered_goal()) {
         return true;
     } else if (world_clear_count == STAGES_PER_WORLD) {
         // mode::is_story_cutscene(mkb::sub_mode)
@@ -267,10 +263,12 @@ bool is_between_worlds() {
     return false;
 }
 
+// && mode::is_postgoal(mkb::sub_mode))
 bool is_run_complete() {
-    if (mkb::scen_info.world == 9) {
-        return (mkb::get_world_unbeaten_stage_count(9) == 9 && mode::is_postgoal(mkb::sub_mode)) ||
-               mkb::get_world_unbeaten_stage_count(9) == 10;
+    if (mkb::scen_info.world == WORLD_COUNT - 1) {
+        return (get_clear_count_for_world() == STAGES_PER_WORLD - 1 &&
+                validate::has_entered_goal()) ||
+               get_clear_count_for_world() == STAGES_PER_WORLD;
     }
     return false;
 }
@@ -333,8 +331,8 @@ u32 get_split_timer_for_world(int world_idx) {
 }
 
 // Doing this for now until a better display setup is figured out
-u16 get_timer_y_pos(TimerType type) {
-    u16 y_pos = 2;
+u16 get_timer_y_pos(TimerType type) {  // maybe rename to get_timer_row()?
+    u16 y_pos = STARTING_ROW;
     bool show_death_counter = pref::get(pref::BoolPref::ShowDeathCounter);
 
     if (type == TimerType::Fullgame) {
@@ -370,37 +368,37 @@ TimerDisplayInfo get_timer_display_info(TimerType type) {
 
 void draw_timers() {
     TimerDisplayInfo fullgame_info = get_timer_display_info(TimerType::Fullgame);
-    u32 loadless_time = get_split_timer_for_world(9);
+    u32 loadless_time = get_split_timer_for_world(WORLD_COUNT - 1);
 
     if (should_display_timer(TimerType::Fullgame)) {
         timerdisp::draw_timer(fullgame_info.pos_x, fullgame_info.pos_y, fullgame_info.text_offset,
                               "Time:", loadless_time, false, draw::WHITE);
     }
 
-    for (u16 idx = 0; idx < WORLD_COUNT; idx++) {
-        TimerDisplayInfo seg_info = get_timer_display_info(TimerType::Segment);
+    u16 world_idx = mkb::scen_info.world;  // index of the current world (between 0 and 9 inclusive)
+    TimerDisplayInfo seg_info = get_timer_display_info(TimerType::Segment);
 
-        if (mkb::scen_info.world == idx && should_display_timer(TimerType::Segment)) {
-            timerdisp::draw_timer(seg_info.pos_x, seg_info.pos_y, seg_info.text_offset,
-                                  "Seg:", s_timer_group[idx].segment, false, draw::WHITE);
-        }
+    if (should_display_timer(TimerType::Segment)) {
+        timerdisp::draw_timer(seg_info.pos_x, seg_info.pos_y, seg_info.text_offset,
+                              "Seg:", s_timer_group[world_idx].segment, false, draw::WHITE);
     }
 }
 
 // We only use this function for 0 <= row <= 9
 Vec2d get_breakdown_row_position(u16 row) {
-    u16 pos_y = timerdisp::row_number_to_vertical_pos(row);
+    u16 starting_row = get_timer_y_pos(TimerType::Segment);
+    u16 pos_y = timerdisp::row_number_to_vertical_pos(starting_row + row);
     if (row < WORLD_COUNT - 1) {
         return {IW_TIME_LOCATION_X, pos_y};
-    } else {
+    } else {  // "W10" takes up more space than "Wk" for "1 <= k <= 9"
         return {SEGMENT_TIMER_LOCATION_X, pos_y};
     }
 }
 
-void draw_breakdown_screen() {
-    char split_buf[10][32] = {};
-    char seg_buf[10][32] = {};
-    char row_info_buf[10][32] = {};
+void draw_breakdown_screen() {  // TODO: death count per world
+    char split_buf[WORLD_COUNT][32] = {};
+    char seg_buf[WORLD_COUNT][32] = {};
+    char row_info_buf[WORLD_COUNT][32] = {};  // Format: "Wk: split k-1 time (segment k-1 time)"
 
     for (u16 idx = 0; idx < WORLD_COUNT; idx++) {
         Vec2d pos = get_breakdown_row_position(idx);
@@ -415,24 +413,6 @@ void draw_breakdown_screen() {
     }
 }
 
-//  void dmd_scen_sel_world_init(void);
-//  void dmd_scen_sel_world_next(void);
-static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_init)> s_dmd_scen_sel_world_init_tramp;
-static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_next)> s_dmd_scen_sel_world_next_tramp;
-
-void init() {
-    patch::hook_function(s_dmd_scen_sel_world_init_tramp, mkb::dmd_scen_sel_world_init, []() {
-        // s_timer_group[0].full_world += 1;
-        // while (true);
-        s_dmd_scen_sel_world_init_tramp.dest();
-    });
-
-    patch::hook_function(s_dmd_scen_sel_world_next_tramp, mkb::dmd_scen_sel_world_next, []() {
-        // s_timer_group[0].full_world += 1;
-        s_dmd_scen_sel_world_next_tramp.dest();
-    });
-}
-
 void disp() {
     if ((mkb::main_game_mode != mkb::STORY_MODE && mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_INIT &&
          mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_MAIN) ||
@@ -445,59 +425,20 @@ void disp() {
     if (pref::get(pref::BoolPref::ShowRunBreakdown) && is_run_complete()) {
         draw_breakdown_screen();
     }
+    /*
+        // mkb::scen_info.mode
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 2, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Dbg:", 60 * s_timer_group[0].full_world, true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 3, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 4, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 5, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE); */
 
-    // mkb::scen_info.mode
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Dbg:", 60 * s_timer_group[0].full_world, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 3, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 4, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, 5, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE);
-
-    bool is_postgoal =
-        (mkb::sub_mode == mkb::SMD_GAME_GOAL_INIT || mkb::sub_mode == mkb::SMD_GAME_GOAL_MAIN ||
-         mkb::sub_mode == mkb::SMD_GAME_GOAL_REPLAY_INIT ||
-         mkb::sub_mode == mkb::SMD_GAME_GOAL_REPLAY_MAIN ||
-         mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN);
-
-    bool is_between_worlds = false;
-    if ((s_completed_stages % STAGES_PER_WORLD == 9) && is_postgoal) {
-        is_between_worlds = true;
-    } else if ((s_completed_stages % STAGES_PER_WORLD == 0 &&
-                mkb::g_storymode_stageselect_state == mkb::STAGE_SELECT_INTRO_SEQUENCE) ||
-               s_completed_stages % STAGES_PER_WORLD != 0) {
-        // no longer "between worlds" if you enter the next world's 10 ball screen, or if you break
-        // the tape on the last stage of the current world, but retry
-        is_between_worlds = false;
-    }
-
-    bool is_run_complete = (mkb::scen_info.world == 9 &&
-                            ((mkb::get_world_unbeaten_stage_count(9) == 9 && is_postgoal) ||
-                             mkb::get_world_unbeaten_stage_count(9) == 10));
-
-    // move the position of the fullgame timer if the death counter is on
-    u32 fullgame_timer_location_y = 2;
-    if (pref::get(pref::BoolPref::ShowDeathCounter)) {
-        fullgame_timer_location_y++;
-    }
-
-    bool display_story_timer = false;
-    switch (TimerOptions(pref::get(pref::U8Pref::FullgameTimerOptions))) {
-        case TimerOptions::AlwaysShow:
-            display_story_timer = true;
-            break;
-        case TimerOptions::BetweenWorlds:
-            display_story_timer = is_between_worlds;
-            break;
-        case TimerOptions::EndOfRun:
-            display_story_timer = is_run_complete;
-            break;
-        case TimerOptions::DontShow:
-            display_story_timer = false;
-            break;
-    }
+    //
+    // --- old stuff (will comment out/remove) ---
+    //
 
     // at the start of each world, we need to correct the timer by 1 frame
     u32 full_world[10] = {};
@@ -524,112 +465,24 @@ void disp() {
     }
     split[0] = segment[0];
     u32 loadless_story_timer = split[9];
-    /*
-        if (display_story_timer) {
-            timerdisp::draw_timer(FULLGAME_TIMER_LOCATION_X, fullgame_timer_location_y,
-                                  FULLGAME_TIMER_TEXT_OFFSET, "Time:", loadless_story_timer, false,
-                                  draw::WHITE);
-        }
-     */
-    // move the position of the segment timer depending on if the death counter and fullgame timer
-    // is on
-    u32 segment_timer_location_y = 2;
-    if (display_story_timer) {
-        segment_timer_location_y++;
-    }
-    if (pref::get(pref::BoolPref::ShowDeathCounter)) {
-        segment_timer_location_y++;
-    }
-    /*
-        switch (TimerOptions(pref::get(pref::U8Pref::SegmentTimerOptions))) {
-            case TimerOptions::AlwaysShow:
-                for (s32 k = 0; k < WORLD_COUNT; k++) {
-                    if (mkb::scen_info.world == k && !is_run_complete) {
-                        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, segment_timer_location_y,
-                                              SEGMENT_TIMER_TEXT_OFFSET, "Seg:", segment[k], false,
-                                              draw::WHITE);
-                    }
-                }
-                break;
-            case TimerOptions::BetweenWorlds:
-                for (s32 k = 0; k < WORLD_COUNT; k++) {
-                    if (is_between_worlds && mkb::scen_info.world == k && k != 9) {
-                        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, segment_timer_location_y,
-                                              SEGMENT_TIMER_TEXT_OFFSET, "Seg:", segment[k], false,
-                                              draw::WHITE);
-                    }
-                }
-                break;
-            case TimerOptions::EndOfRun:
-                break;
-            case TimerOptions::DontShow:
-                break;
-        } */
+}
 
-    u32 split_hours[10] = {};
-    u32 split_minutes[10] = {};
-    u32 split_seconds[10] = {};
-    u32 split_centiseconds[10] = {};
+//  void dmd_scen_sel_world_init(void);
+//  void dmd_scen_sel_world_next(void);
+static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_init)> s_dmd_scen_sel_world_init_tramp;
+static patch::Tramp<decltype(&mkb::dmd_scen_sel_world_next)> s_dmd_scen_sel_world_next_tramp;
 
-    u32 segment_hours[10] = {};
-    u32 segment_minutes[10] = {};
-    u32 segment_seconds[10] = {};
-    u32 segment_centiseconds[10] = {};
+void init() {
+    patch::hook_function(s_dmd_scen_sel_world_init_tramp, mkb::dmd_scen_sel_world_init, []() {
+        // s_timer_group[0].full_world += 1;
+        // while (true);
+        s_dmd_scen_sel_world_init_tramp.dest();
+    });
 
-    for (s32 k = 0; k < WORLD_COUNT; k++) {
-        split_hours[k] = split[k] / HOUR_FRAMES;
-        split_minutes[k] = split[k] % HOUR_FRAMES / MINUTE_FRAMES;
-        split_seconds[k] = split[k] % MINUTE_FRAMES / SECOND_FRAMES;
-        split_centiseconds[k] = (split[k] % SECOND_FRAMES) * 100 / 60;
-
-        segment_hours[k] = segment[k] / HOUR_FRAMES;
-        segment_minutes[k] = segment[k] % HOUR_FRAMES / MINUTE_FRAMES;
-        segment_seconds[k] = segment[k] % MINUTE_FRAMES / SECOND_FRAMES;
-        segment_centiseconds[k] = (segment[k] % SECOND_FRAMES) * 100 / 60;
-    }
-
-    char timer_str[10][32] = {};  // timer_str[k-1] is the formatted text for "Wk: split[k-1]
-                                  // (segment[k-1])"
-
-    // if the segment timer is enabled in any capacity, after the tape is broken on the last stage,
-    // show all 10 split and iw times in the format "Wk: split[k] (segment[k])"
-    // to do: it is very likely that the current timer formatting text below is redundant given that
-    // there is similar code in timerdisp.cpp; for later: implement complex's suggestion for this
-    /* if (TimerOptions(pref::get(pref::U8Pref::SegmentTimerOptions)) != TimerOptions::DontShow &&
-        is_run_complete) {
-        for (s32 k = 0; k < WORLD_COUNT; k++) {
-            u32 X[10] = {};  // horizontal position for the line of text "Wk: split[k] (segment[k])"
-            if (k != 9) {
-                X[k] = IW_TIME_LOCATION_X;
-            } else {
-                X[k] =
-                    SEGMENT_TIMER_LOCATION_X;  // change the position for world 10 because W10 takes
-                                               // up 3 characters instead of 2 like the rest
-            }
-            u32 Y[k] = {};  // vertical position for the line of text "Wk: split[k] (segment[k])"
-            Y[k] = 24 + (segment_timer_location_y + k) * 16;
-            if (split_hours[k] > 0) {
-                if (segment_hours[k] > 0) {
-                    mkb::sprintf(timer_str[k], "W%d:%d:%02d:%02d.%02d (%d:%02d:%02d.%02d)", k + 1,
-                                 split_hours[k], split_minutes[k], split_seconds[k],
-                                 split_centiseconds[k], segment_hours[k], segment_minutes[k],
-                                 segment_seconds[k], segment_centiseconds[k]);
-                    draw::debug_text(X[k], Y[k], draw::WHITE, "%s", timer_str[k]);
-                } else {
-                    mkb::sprintf(timer_str[k], "W%d:%d:%02d:%02d.%02d (%02d:%02d.%02d)", k + 1,
-                                 split_hours[k], split_minutes[k], split_seconds[k],
-                                 split_centiseconds[k], segment_minutes[k], segment_seconds[k],
-                                 segment_centiseconds[k]);
-                    draw::debug_text(X[k], Y[k], draw::WHITE, "%s", timer_str[k]);
-                }
-            } else {
-                mkb::sprintf(timer_str[k], "W%d:%02d:%02d.%02d (%02d:%02d.%02d)", k + 1,
-                             split_minutes[k], split_seconds[k], split_centiseconds[k],
-                             segment_minutes[k], segment_seconds[k], segment_centiseconds[k]);
-                draw::debug_text(X[k], Y[k], draw::WHITE, "%s", timer_str[k]);
-            }
-        }
-    } */
+    patch::hook_function(s_dmd_scen_sel_world_next_tramp, mkb::dmd_scen_sel_world_next, []() {
+        // s_timer_group[0].full_world += 1;
+        s_dmd_scen_sel_world_next_tramp.dest();
+    });
 }
 
 }  // namespace storytimer
