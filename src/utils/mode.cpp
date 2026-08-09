@@ -5,7 +5,29 @@
 
 namespace mode {
 
-// -- spin in ---
+// This file collects several submode, main game mode, scenario mode, and storymode stage select
+// state checks all in one place. Since these kinds of checks are common, this is done with
+// the hope of trying to make things more concise/convenient while retaining clarity
+
+// --- game scenario submodes ---
+
+bool is_game_scenario_return(mkb::SubMode submode) {
+    // this submode doesn't seem to be entered on first 10 ball screen spin in
+    return submode == mkb::SMD_GAME_SCENARIO_RETURN;
+}
+
+bool is_game_scenario_main(mkb::SubMode submode) {
+    // submode that includes the 10 ball screen, the story mode file select, and name creation
+    // screens
+    return (submode == mkb::SMD_GAME_SCENARIO_MAIN);
+}
+
+bool is_game_scenario(mkb::SubMode submode) {
+    // includes the 1 frame of game scenario return; it's useful to include this in some checks
+    return (submode == mkb::SMD_GAME_SCENARIO_MAIN || submode == mkb::SMD_GAME_SCENARIO_RETURN);
+}
+
+// --- spin in ---
 
 bool is_spin_in_first_init(mkb::SubMode submode) { return submode == mkb::SMD_GAME_FIRST_INIT; }
 
@@ -125,12 +147,6 @@ bool is_stage_exit_submode(mkb::SubMode submode) {
 
 // --- 10 ball screen related things ---
 
-bool is_game_scenario_return(mkb::SubMode submode) {
-    // seems to be the 10 ball screen spin in init or something when returning from a stage
-    // this submode doesn't seem to be entered on first 10 ball screen spin in
-    return submode == mkb::SMD_GAME_SCENARIO_RETURN;
-}
-
 bool is_on_10_ball_spin_in(mkb::StoryModeStageSelectState state) {
     return state == mkb::STAGE_SELECT_INTRO_SEQUENCE;
 }
@@ -141,32 +157,23 @@ bool is_idle_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
 }
 
 bool has_selected_stage_on_10_ball_screen_init(mkb::StoryModeStageSelectState state) {
-    return state == 5;
+    return state == 5;  // unlabelled init
 }
 
-bool has_selected_stage_on_10_ball_screen(mkb::StoryModeStageSelectState state) {  // 5 might be an
-                                                                                   // unlabelled
-                                                                                   // init?
+bool has_selected_stage_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
     return state == mkb::STAGE_SELECTED;
 }
 
 // --- more storymode related things ---
 
-bool is_game_scenario_main(mkb::SubMode submode) {
-    // submode that includes the 10 ball screen, the story mode file select, and name creation
-    // screens
-    return (submode == mkb::SMD_GAME_SCENARIO_MAIN);
-}
-
-bool is_game_scenario(mkb::SubMode submode) {
-    // includes the 1 frame of game scenario return; it's useful to include this in some checks
-    return (submode == mkb::SMD_GAME_SCENARIO_MAIN || submode == mkb::SMD_GAME_SCENARIO_RETURN);
+bool is_main_game_mode_story(mkb::MainGameMode main_game_mode) {
+    return main_game_mode == mkb::STORY_MODE;
 }
 
 // The point of the next 4 functions is to provide safety checks for being able to access
 // mkb::g_storymode_stageselect_state safely at all
 
-bool is_scene_mode_10_ball_screen(mkb::ScenInfo scene_info) {
+bool is_scen_mode_10_ball_screen(mkb::ScenInfo scen_info) {
     // We need to be careful not to access mkb::g_storymode_stageselect_state when not in a story
     // mode run (we're not allowed to access it even on the file and name entry screens, so a
     // main_game_mode check isn't enough) Note that this will return false a little after we select
@@ -176,31 +183,29 @@ bool is_scene_mode_10_ball_screen(mkb::ScenInfo scene_info) {
     // the 10 ball screen (during the exit game menu) Interestingly, mkb::DMD_SCEN_FLOOR_INIT
     // doesn't seem to happen anywhere on the 10 ball screen; DMD_SCEN_RETURN_INIT seems to
     // correspond to game_scenario_return?
-    return (scene_info.mode == mkb::DMD_SCEN_RETURN_INIT ||
-            scene_info.mode == mkb::DMD_SCEN_SEL_FLOOR_MAIN);
+    return (scen_info.mode == mkb::DMD_SCEN_RETURN_INIT ||
+            scen_info.mode == mkb::DMD_SCEN_SEL_FLOOR_MAIN);
 }
 
-bool is_scene_mode_on_stage(mkb::ScenInfo scene_info) {
+bool is_scen_mode_on_stage(mkb::ScenInfo scen_info) {
     // Returns true on a stage and the tail end of the 10 ball screen (usually, see exceptions
     // explained above)
-    return (scene_info.mode == mkb::DMD_SCEN_GAME_INIT ||
-            scene_info.mode == mkb::DMD_SCEN_GAME_MAIN);
+    return (scen_info.mode == mkb::DMD_SCEN_GAME_INIT || scen_info.mode == mkb::DMD_SCEN_GAME_MAIN);
 }
 
 // The next function gets rid of many of the exceptions described above by adding an additional
 // submode check It includes all of the 10 ball screen except for some of the time after selecting a
 // stage (I think when the next stage is loaded; some time after pressing A to select a stage is
 // still caught by this function) For that, use the next function
-bool is_on_10_ball_screen_proper(mkb::SubMode sub_mode, mkb::ScenInfo scene_info) {
-    // might be more descriptive to rename this to is_on_10_ball_screen_pre_stage_load()
-    return (is_game_scenario(sub_mode) && is_scene_mode_10_ball_screen(scene_info));
+bool is_on_10_ball_screen_pre_stage_load(mkb::SubMode sub_mode, mkb::ScenInfo scen_info) {
+    return (is_game_scenario(sub_mode) && is_scen_mode_10_ball_screen(scen_info));
 }
 
 // This function catches the part of the 10 ball screen missed by the function above (after pressing
 // A and the stage has loaded)
-bool is_on_10_ball_screen(mkb::SubMode sub_mode, mkb::ScenInfo scene_info) {
+bool is_on_10_ball_screen(mkb::SubMode sub_mode, mkb::ScenInfo scen_info) {
     return (is_game_scenario(sub_mode) &&
-            (is_scene_mode_10_ball_screen(scene_info) || is_scene_mode_on_stage(scene_info)));
+            (is_scen_mode_10_ball_screen(scen_info) || is_scen_mode_on_stage(scen_info)));
 }
 
 bool is_pre_selection_on_10_ball_screen(mkb::SubMode submode, mkb::ScenInfo scen_info,
@@ -211,18 +216,14 @@ bool is_pre_selection_on_10_ball_screen(mkb::SubMode submode, mkb::ScenInfo scen
     return false;
 }
 
-bool is_main_game_mode_story(mkb::MainGameMode main_game_mode) {
-    return main_game_mode == mkb::STORY_MODE;
-}
-
 // Experimental/need to stress test this, should be anything in a story mode run minus cutscenes
 // Should this include scen_info.mode == mkb::DMD_SCEN_SEL_WORLD_NEXT (9)? the scen mode is 9 for 2f
 // between worlds Note that this also doesn't include SMD_GAME_FIRST_INIT since is_on_stage()
 // doesn't include that
 bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode,
-                         mkb::ScenInfo scene_info) {
+                         mkb::ScenInfo scen_info) {
     if (is_main_game_mode_story(main_game_mode)) {
-        return (is_on_10_ball_screen(sub_mode, scene_info) || is_on_stage(sub_mode) ||
+        return (is_on_10_ball_screen(sub_mode, scen_info) || is_on_stage(sub_mode) ||
                 is_story_exit_game(sub_mode));
     }
     return false;
@@ -238,17 +239,17 @@ bool is_first_frame_of_world(mkb::ScenInfo scen_info) {
 */
 
 /*
-bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::ScenInfo scene_info) {
+bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::ScenInfo scen_info) {
     // Experimental/need to stress test this, should be anything in a story mode run minus cutscenes
-    return is_main_game_mode_story(main_game_mode) && (is_scene_mode_10_ball_screen(scene_info) ||
-is_scene_mode_on_stage(scene_info));
+    return is_main_game_mode_story(main_game_mode) && (is_scen_mode_10_ball_screen(scen_info) ||
+is_scen_mode_on_stage(scen_info));
 }
  */
 
-int get_story_stage_id_from_scene_info(mkb::ScenInfo scene_info) {
+int get_story_stage_id_from_scen_info(mkb::ScenInfo scen_info) {
     // useful if we want to get the stage id for the stage we're currently hovering over
     // on the 10 ball screen
-    return mkb::get_story_mode_stage_id(scene_info.world, scene_info.world_stage);
+    return mkb::get_story_mode_stage_id(scen_info.world, scen_info.world_stage);
 }
 
 bool is_story_cutscene(mkb::SubMode submode) {
@@ -267,11 +268,16 @@ bool is_storymode_file_screen_init(mkb::ScenInfo scen_info) {
     return (scen_info.mode == mkb::DMD_SCEN_LOADGAME_INIT);
 }
 
-bool is_storymode_file_screen(mkb::ScenInfo scen_info) {
+bool is_storymode_file_screen_main(mkb::ScenInfo scen_info) {
     return (scen_info.mode == mkb::DMD_SCEN_LOADGAME_MAIN);
 }
 
-bool is_storymode_name_entry_screen(mkb::ScenInfo scen_info) {
+bool is_storymode_name_entry_init(mkb::ScenInfo scen_info) {
+    // For some reason causes crashes when you check this during the file screen init
+    return scen_info.mode == mkb::DMD_SCEN_ENTRY_INIT;
+}
+
+bool is_storymode_name_entry_screen_main(mkb::ScenInfo scen_info) {
     return (scen_info.mode == mkb::DMD_SCEN_ENTRY_MAIN);
 }
 

@@ -4,6 +4,7 @@
 
 namespace timerdisp {
 
+// TimeComp = "Time Components"
 struct TimeComp {
     u32 hours;
     u32 minutes;

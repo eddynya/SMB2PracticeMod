@@ -6,6 +6,7 @@ namespace mode {
 
 // submodes that are on the stage
 
+bool is_spin_in_first_init(mkb::SubMode submode);
 bool is_spin_in_init(mkb::SubMode submode);
 bool is_spin_in(mkb::SubMode submode);
 
@@ -43,27 +44,20 @@ bool is_idle_on_10_ball_screen(mkb::StoryModeStageSelectState state);
 bool has_selected_stage_on_10_ball_screen_init(mkb::StoryModeStageSelectState state);
 bool has_selected_stage_on_10_ball_screen(mkb::StoryModeStageSelectState state);
 
-bool is_scene_mode_10_ball_screen(mkb::ScenInfo scene_info);
-bool is_scene_mode_on_stage(mkb::ScenInfo scene_info);
 bool is_main_game_mode_story(mkb::MainGameMode main_game_mode);
 
-bool is_on_10_ball_screen_proper(mkb::SubMode sub_mode, mkb::ScenInfo scene_info);
-bool is_on_10_ball_screen(mkb::SubMode sub_mode, mkb::ScenInfo scene_info);
-bool is_pre_selection_on_10_ball_screen(mkb::SubMode submode, mkb::ScenInfo scen_info,
-                                        mkb::StoryModeStageSelectState state);
-bool is_storymode_proper(mkb::MainGameMode main_game_mode, mkb::SubMode sub_mode,
-                         mkb::ScenInfo scene_info);
+bool is_on_10_ball_screen(mkb::SubMode sub_mode, mkb::ScenInfo scen_info);
 
 bool is_storymode_file_screen_init(mkb::ScenInfo scen_info);
-bool is_storymode_file_screen(mkb::ScenInfo scen_info);
-bool is_storymode_name_entry_screen(mkb::ScenInfo scen_info);
+bool is_storymode_file_screen_main(mkb::ScenInfo scen_info);
+bool is_storymode_name_entry_screen_main(mkb::ScenInfo scen_info);
 
 bool is_story_cutscene(mkb::SubMode submode);
 
 // misc utility
 
 u16 theme_id_from_stage_id(int stage_id);
-int get_story_stage_id_from_scene_info(mkb::ScenInfo scene_info);
+int get_story_stage_id_from_scen_info(mkb::ScenInfo scen_info);
 bool is_paused();
 
 }  // namespace mode
