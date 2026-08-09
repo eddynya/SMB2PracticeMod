@@ -4,33 +4,15 @@
 
 #include "../mods/freecam.h"
 #include "../mods/validate.h"
-#include "../systems/assembly.h"
-#include "../systems/pad.h"
 #include "../systems/pref.h"
 #include "../utils/draw.h"
+#include "../utils/macro_utils.h"
 #include "../utils/mode.h"
 #include "../utils/patch.h"
 #include "../utils/timerdisp.h"
 #include "validate.h"
 
 namespace storytimer {
-
-enum class TimerOptions {
-    DontShow = 0,
-    AlwaysShow = 1,
-    BetweenWorlds = 2,
-    EndOfRun = 3,
-};
-
-enum class TimerType {
-    Fullgame,
-    Segment,
-};
-
-struct TimerGroup {
-    u32 segment;     // the time taken to complete a world up until tape break on the last stage
-    u32 full_world;  // the time taken to complete a world until the fade to white on the last stage
-};
 
 constexpr u16 FULLGAME_TIMER_LOCATION_X = 18 + 24;
 constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 56;
@@ -44,13 +26,37 @@ constexpr u16 STAGES_PER_WORLD = 10;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // each world has its own TimerGroup structure
 
-static u32 s_counter = 0;  // for testing
+// static u32 s_counter = 0;  // testing variable
+
+// Some getters that other files can use (if needed)
+
+TimerGroup get_world_timer_info(u16 world_idx) {
+    // clamp for safety so we don't access outside the bounds of the array
+    u16 clamped_idx = MIN(world_idx, WORLD_COUNT - 1);
+    return s_timer_group[clamped_idx];
+}
+
+// Used to calculate our split times for the breakdown screen; also gives us a
+// convenient way to calculate fullgame loadless time
+u32 get_split_timer_for_world(u16 world_idx) {
+    u16 clamped_idx = MIN(world_idx, WORLD_COUNT - 1);
+    u32 prev_world_sum = 0;
+    for (u16 k = 0; k < clamped_idx; k++) {
+        prev_world_sum += s_timer_group[k].full_world;
+    }
+    return prev_world_sum + s_timer_group[clamped_idx].segment;
+}
+
+u32 get_loadless_time() { return get_split_timer_for_world(WORLD_COUNT - 1); }
+
+// --- main timer logic ---
 
 void reset_timer() {
-    s_counter = 0;  // debugging
+    // s_counter = 0;  // debugging
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         s_timer_group[k] = {};
     }
+    // mkb::OSReport("Reset timer \n");
 }
 
 // Some notes
@@ -75,6 +81,7 @@ bool should_segment_timer_run_on_stage(int world_idx) {
 }
 
 // Importantly, we don't increment the timer on the 10 ball screen after selecting a stage
+// since the time between doing so and entering the next stage can be highly variable
 // To properly increment the timer on the 10 ball screen, we run this
 // update function inside a hook for mkb::g_handle_storymode_stageselect_state
 void update_timers_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
@@ -89,12 +96,24 @@ void update_timers_on_10_ball_screen(mkb::StoryModeStageSelectState state) {
     }
 }
 
+// The above function does not get run when the game is paused, so we also need this
+void update_timers_while_paused_on_10_ball_screen() {
+    for (u16 k = 0; k < WORLD_COUNT; k++) {
+        if (mkb::scen_info.world == k) {
+            if (mode::is_on_10_ball_screen(mkb::sub_mode, mkb::scen_info) && mode::is_paused()) {
+                s_timer_group[k].full_world += 1;
+                s_timer_group[k].segment = s_timer_group[k].full_world;
+            }
+        }
+    }
+}
+
+// mode::is_on_stage_with_endpoints(mkb::sub_mode)
+// Increment the timer on every submode on the stage (and exit game screen)
 void update_timers_on_stage() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         if (mkb::scen_info.world == k) {  // World (k+1)'s timer
-            if (mode::is_on_stage_with_endpoints(mkb::sub_mode) ||
-                mode::is_story_exit_game(mkb::sub_mode)) {  // include extra game scenario return?
-
+            if (mode::is_on_stage(mkb::sub_mode) || mode::is_story_exit_game(mkb::sub_mode)) {
                 s_timer_group[k].full_world += 1;
 
                 if (should_segment_timer_run_on_stage(k)) {
@@ -106,17 +125,17 @@ void update_timers_on_stage() {
 }
 
 void tick() {
-    // reset the timer on the file select screen and the name entry screen
-    if (mode::is_storymode_file_screen(mkb::scen_info) ||
-        mode::is_storymode_name_entry_screen(mkb::scen_info)) {
-        reset_timer();
-    }
+    if (mode::is_main_game_mode_story(mkb::main_game_mode)) {
+        if (mode::is_storymode_file_screen_init(mkb::scen_info)) {
+            reset_timer();
+        }
 
-    update_timers_on_stage();
+        update_timers_on_stage();
+        update_timers_while_paused_on_10_ball_screen();
+    }
 }
 
-// cutscene submodes
-// 249, 247, 248, 94
+// --- display stuff ---
 
 // maybe move the next 2 functions to mode.cpp so deathcounter can also use them?
 bool is_between_worlds() {
@@ -172,14 +191,6 @@ bool should_display_timer(TimerType type) {
     }
 }
 
-u32 get_split_timer_for_world(int world_idx) {
-    u32 prev_world_sum = 0;
-    for (u16 k = 0; k < world_idx; k++) {
-        prev_world_sum += s_timer_group[k].full_world;
-    }
-    return prev_world_sum + s_timer_group[world_idx].segment;
-}
-
 // Doing this for now until a better display setup is figured out
 u16 get_timer_y_pos(TimerType type) {  // maybe rename to get_timer_row()?
     u16 y_pos = STARTING_ROW;
@@ -218,7 +229,7 @@ TimerDisplayInfo get_timer_display_info(TimerType type) {
 
 void draw_timers() {
     TimerDisplayInfo fullgame_info = get_timer_display_info(TimerType::Fullgame);
-    u32 loadless_time = get_split_timer_for_world(WORLD_COUNT - 1);
+    u32 loadless_time = get_loadless_time();
 
     if (should_display_timer(TimerType::Fullgame)) {
         timerdisp::draw_timer(fullgame_info.pos_x, fullgame_info.pos_y, fullgame_info.text_offset,
@@ -257,17 +268,14 @@ void draw_breakdown_screen() {  // TODO: death count per world
                                          timerdisp::TimeFormatType::MINUTES_ALWAYS_LEADING_ZERO);
         timerdisp::format_time_to_buffer(seg_buf[idx], s_timer_group[idx].segment,
                                          timerdisp::TimeFormatType::MINUTES_ALWAYS_LEADING_ZERO);
-        mkb::sprintf(row_info_buf[idx], "W%d: %s (%s)", idx + 1, split_buf[idx], seg_buf[idx]);
+        mkb::sprintf(row_info_buf[idx], "W%d:%s (%s)", idx + 1, split_buf[idx], seg_buf[idx]);
 
         draw::debug_text(pos.x, pos.y, draw::WHITE, "%s", row_info_buf[idx]);
     }
 }
 
 void disp() {
-    if ((mkb::main_game_mode != mkb::STORY_MODE && mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_INIT &&
-         mkb::sub_mode != mkb::SMD_AUTHOR_PLAY_MAIN) ||
-        freecam::should_hide_hud()) {  // TODO: don't include file init because the previous run's
-                                       // breakdown screen shows up there
+    if (!mode::is_main_game_mode_story(mkb::main_game_mode) || freecam::should_hide_hud()) {
         return;
     }
 
@@ -297,22 +305,15 @@ static patch::Tramp<decltype(&mkb::g_handle_storymode_stageselect_state)>
     s_g_handle_storymode_stageselect_state_tramp;
 
 void init_main_loop() {
-    patch::hook_function(s_fade_screen_to_color_tramp, mkb::fade_screen_to_color,
+    /* patch::hook_function(s_fade_screen_to_color_tramp, mkb::fade_screen_to_color,
                          [](mkb::uint flags, u32 color, mkb::uint frames) {
                              // don't run for testing purposes
-                             if (mode::is_game_scenario_main(mkb::sub_mode)) {
-                                 // s_fade_screen_to_color_tramp.dest(flags, color, frames);
-                             }
-                         });
+                             // s_fade_screen_to_color_tramp.dest(flags, color, frames);
+                         }); */
     patch::hook_function(s_g_handle_storymode_stageselect_state_tramp,
                          mkb::g_handle_storymode_stageselect_state, []() {
                              s_g_handle_storymode_stageselect_state_tramp.dest();
-
                              update_timers_on_10_ball_screen(mkb::g_storymode_stageselect_state);
-
-                             if (mkb::g_storymode_stageselect_state == 2) {
-                                 s_counter += 1;
-                             }
                          });
 }
 
