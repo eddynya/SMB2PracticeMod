@@ -127,6 +127,10 @@ bool is_sel_ngc(mkb::SubMode submode) {
 
 // --- story exit game submodes ---
 
+bool is_story_exit_game_init(mkb::SubMode submode) {
+    return submode == mkb::SMD_GAME_INTR_SEL_INIT;
+}
+
 bool is_story_exit_game_message(mkb::SubMode submode) {
     return (submode == mkb::SMD_GAME_INTR_SEL_INIT || submode == mkb::SMD_GAME_INTR_SEL_MAIN);
 }
@@ -143,6 +147,11 @@ bool is_story_exit_game(mkb::SubMode submode) {
 
 bool is_stage_exit_submode(mkb::SubMode submode) {
     return (is_game_scenario_main(submode) || is_sel_ngc(submode) || is_story_exit_game(submode));
+}
+
+bool is_stage_exit_init(mkb::SubMode submode) {
+    return is_game_scenario_return(submode) || is_sel_ngc_init(submode) ||
+           is_story_exit_game_init(submode);
 }
 
 // --- 10 ball screen related things ---
