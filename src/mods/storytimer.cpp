@@ -10,6 +10,7 @@
 #include "../utils/mode.h"
 #include "../utils/patch.h"
 #include "../utils/timerdisp.h"
+#include "deathcounter.h"
 #include "validate.h"
 
 namespace storytimer {
@@ -21,8 +22,8 @@ constexpr u16 SEGMENT_TIMER_TEXT_OFFSET = 44;
 constexpr u16 BREAKDOWN_ROW_LOCATION_X = 42 + 24;
 constexpr u16 STARTING_ROW = 2;
 
-constexpr u16 WORLD_COUNT = 10;
-constexpr u16 STAGES_PER_WORLD = 10;
+constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
+constexpr u16 STAGES_PER_WORLD = mode::STAGES_PER_WORLD;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // each world has its own TimerGroup structure
 
@@ -57,15 +58,6 @@ void reset_timer() {
         s_timer_group[k] = {};
     }
     // mkb::OSReport("Reset timer \n");
-}
-
-// Some notes
-// (1) mkb::get_world_unbeaten_stage_count() only increments after the game scenario return
-// submode finishes
-// (2) After completing a world, this function returns a value of 10 until the 10 ball screen
-// of the next world (at which point it reverts to 0)
-u16 get_clear_count_for_world() {
-    return mkb::get_world_unbeaten_stage_count(mkb::scen_info.world);
 }
 
 // Places where the segment timer should run while we're on a stage
@@ -137,18 +129,9 @@ void tick() {
 
 // --- display stuff ---
 
-// maybe move the next 2 functions to mode.cpp so deathcounter can also use them?
-bool is_between_worlds() {
-    u16 world_clear_count = get_clear_count_for_world();
-    if ((world_clear_count == STAGES_PER_WORLD - 1) && validate::has_entered_goal()) {
-        return true;
-    } else if (world_clear_count == STAGES_PER_WORLD) {
-        return true;
-    }
-    return false;
-}
-
-bool is_run_complete() { return (mkb::scen_info.world == WORLD_COUNT - 1) && is_between_worlds(); }
+// To make things less verbose/cluttered
+// bool is_between_worlds() { return mode::is_between_worlds(validate::has_entered_goal()); }
+// bool is_run_complete() { return mode::is_run_complete(validate::has_entered_goal()); }
 
 // The run breakdown screen replaces the segment timer at the end of the run
 // if the pref for it is on
@@ -160,31 +143,33 @@ bool should_display_timer(TimerType type) {
         pref = pref::get(pref::U8Pref::SegmentTimerOptions);
     }
 
+    // using namespace validate;
+
     switch (TimerOptions(pref)) {
         case TimerOptions::AlwaysShow:
             if (type == TimerType::Fullgame) {
                 return true;
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
                 // type is segment timer + show breakdown on
-                return !is_run_complete();
+                return !validate::is_run_complete();
             } else {  // type is segment timer + show breakdown off
                 return true;
             }
         case TimerOptions::BetweenWorlds:
             if (type == TimerType::Fullgame) {
-                return is_between_worlds();
+                return validate::is_between_worlds();
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                return is_between_worlds() && !is_run_complete();
+                return validate::is_between_worlds() && !validate::is_run_complete();
             } else {
-                return is_between_worlds();
+                return validate::is_between_worlds();
             }
         case TimerOptions::EndOfRun:
             if (type == TimerType::Fullgame) {
-                return is_run_complete();
+                return validate::is_run_complete();
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
                 return false;
             } else {
-                return is_run_complete();
+                return validate::is_run_complete();
             }
         case TimerOptions::DontShow:
             return false;
@@ -281,7 +266,7 @@ void disp() {
 
     draw_timers();
 
-    if (pref::get(pref::BoolPref::ShowRunBreakdown) && is_run_complete()) {
+    if (pref::get(pref::BoolPref::ShowRunBreakdown) && validate::is_run_complete()) {
         draw_breakdown_screen();
     }
 
