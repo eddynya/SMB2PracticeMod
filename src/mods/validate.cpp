@@ -1,12 +1,13 @@
 #include "validate.h"
 
-#include "mods/physics.h"
-#include "systems/menu_impl.h"
-#include "systems/pad.h"
-#include "systems/pref.h"
-#include "utils/libsavest.h"
-#include "utils/macro_utils.h"
-#include "utils/patch.h"
+#include "../mods/physics.h"
+#include "../systems/menu_impl.h"
+#include "../systems/pad.h"
+#include "../systems/pref.h"
+#include "../utils/libsavest.h"
+#include "../utils/macro_utils.h"
+#include "../utils/mode.h"
+#include "../utils/patch.h"
 
 namespace validate {
 
@@ -195,6 +196,13 @@ void init() {
 }
 
 bool has_entered_goal() { return s_entered_goal; }
+
+// We can use has_entered_goal() to get the following useful status functions during a story mode
+// run (these are used in storytimer.cpp and deathcounter.cpp)
+
+bool is_between_worlds() { return mode::is_between_worlds(has_entered_goal()); }
+
+bool is_run_complete() { return mode::is_run_complete(has_entered_goal()); }
 
 void tick() {
     if (mkb::sub_mode == mkb::SMD_GAME_PLAY_INIT) {

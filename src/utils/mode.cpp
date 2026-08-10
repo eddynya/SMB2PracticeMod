@@ -305,4 +305,45 @@ u16 theme_id_from_stage_id(int stage_id) {
     return static_cast<u16>(mkb::get_stage_world_theme(stage_id));
 }
 
+// --- Story Mode Status Functions ---
+
+// Some notes
+// (1) mkb::get_world_unbeaten_stage_count() only increments after the game scenario return
+// submode finishes
+// (2) After completing a world, this function returns a value of 10 until the 10 ball screen
+// of the next world (at which point it reverts to 0)
+// (3) This function is for getting the clear count of the current world we're on
+u16 get_clear_count_for_world() {
+    return mkb::get_world_unbeaten_stage_count(mkb::scen_info.world);
+}
+
+u16 get_storymode_total_clear_count() {
+    u16 total = 0;
+    for (u16 k = 0; k < WORLD_COUNT; k++) {
+        total += mkb::get_world_unbeaten_stage_count(k);
+    }
+    return total;
+}
+
+// Some notes
+// (1) In the actual use cases of these next 2 functions, we pass in validate::has_entered_goal();
+// however, we've opted to write the functions here using a generic bool argument so that mode.cpp
+// doesn't depend on/have to include validate.h
+// (2) When passing in validate::has_entered_goal(), this function will return true the
+// moment we break the tape on the last stage of a world, all the way until we enter the next
+// world's 10 ball screen (in particular, this includes the cutscene between worlds)
+bool is_between_worlds(bool has_entered_goal) {
+    u16 world_clear_count = get_clear_count_for_world();
+    if ((world_clear_count == STAGES_PER_WORLD - 1) && has_entered_goal) {
+        return true;
+    } else if (world_clear_count == STAGES_PER_WORLD) {
+        return true;
+    }
+    return false;
+}
+
+bool is_run_complete(bool has_entered_goal) {
+    return (mkb::scen_info.world == WORLD_COUNT - 1) && is_between_worlds(has_entered_goal);
+}
+
 }  // namespace mode

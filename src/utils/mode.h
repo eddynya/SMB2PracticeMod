@@ -4,6 +4,9 @@
 
 namespace mode {
 
+constexpr u16 WORLD_COUNT = 10;
+constexpr u16 STAGES_PER_WORLD = 10;
+
 // submodes that are on the stage
 
 bool is_spin_in_first_init(mkb::SubMode submode);
@@ -54,6 +57,13 @@ bool is_storymode_file_screen_main(mkb::ScenInfo scen_info);
 bool is_storymode_name_entry_screen_main(mkb::ScenInfo scen_info);
 
 bool is_story_cutscene(mkb::SubMode submode);
+
+// story mode status
+
+u16 get_clear_count_for_world();
+u16 get_storymode_total_clear_count();
+bool is_between_worlds(bool has_entered_goal);
+bool is_run_complete(bool has_entered_goal);
 
 // misc utility
 
