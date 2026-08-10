@@ -20,15 +20,8 @@ constexpr u16 COUNTER_NUMBER_X_POS = COUNTER_DISPLAY_X_POS + 8 * 10;
 constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 
 static u32 s_world_death_count[WORLD_COUNT] = {};
-
-// Flags to determine when we should/shouldn't increment the death counter
-
-// "Normal" deaths refer to non-savestate related deaths
-// Default state for the normal deaths flag should be true when entering a stage since retrying
-// before first drop in shouldn't count as a death
-static bool s_ignore_normal_deaths_flag = true;
-static bool s_ignore_state_load_flag = false;
-static bool s_has_incremented_death_counter = false;
+// Flag to determine when we should/shouldn't increment the death counter
+static bool s_can_incr_death_counter = false;
 
 u32 get_total_death_count() {
     u32 total = 0;
@@ -47,15 +40,10 @@ void increment_world_death_counter() {
         return;
     }
     s_world_death_count[mkb::scen_info.world] += 1;  // death counter for the current world
-    s_has_incremented_death_counter =
-        true;  // set the flag to be true when calling this function (if no early return)
+    s_can_incr_death_counter = false;
 }
 
-void reset_flags() {
-    s_ignore_normal_deaths_flag = true;
-    s_ignore_state_load_flag = false;
-    s_has_incremented_death_counter = false;
-}
+void reset_flags() { s_can_incr_death_counter = false; }
 
 void reset_death_counters() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
@@ -66,44 +54,36 @@ void reset_death_counters() {
 
 // When we're done holding the savestate button/when gameplay resumes
 void update_flags_on_state_release() {
-    if (mode::is_gameplay(mkb::sub_mode) && !libsavest::state_loaded_this_frame()) {
+    if (validate::is_gameplay_exact() && !libsavest::state_loaded_this_frame()) {
         // As soon as we're done holding the load state button (or just any time we're controlling
         // the monkey on the stage), we're allowed to die
-        s_has_incremented_death_counter = false;
-        s_ignore_normal_deaths_flag = false;
-        s_ignore_state_load_flag = false;
+        s_can_incr_death_counter = true;
     }
 }
 
 bool should_increment_normal_death_counter() {
     bool retried_without_clearing =
-        (mode::is_spin_in_init(mkb::sub_mode) && !s_ignore_normal_deaths_flag);
+        (mode::is_spin_in_init(mkb::sub_mode) && s_can_incr_death_counter);
     bool left_stage_without_clearing =
-        mode::is_stage_exit_submode(mkb::sub_mode) && !s_ignore_normal_deaths_flag;
+        mode::is_stage_exit_submode(mkb::sub_mode) && s_can_incr_death_counter;
     bool died = mode::is_death_init(mkb::sub_mode);
     return (retried_without_clearing || left_stage_without_clearing || died);
 }
 
-void update_normal_deaths() {
-    if (validate::has_entered_goal()) {
-        s_ignore_normal_deaths_flag = true;
+bool should_increment_savestate_death_counter() {
+    return libsavest::state_loaded_this_frame() && s_can_incr_death_counter;
+}
+
+void count_deaths() {
+    if (validate::is_postgoal_exact()) {
+        s_can_incr_death_counter = false;
     }
 
-    if (should_increment_normal_death_counter() && !s_has_incremented_death_counter) {
+    if (should_increment_normal_death_counter()) {
         increment_world_death_counter();
     }
-}
 
-bool should_increment_savestate_death_counter() {
-    return libsavest::state_loaded_this_frame() && !s_ignore_state_load_flag;
-}
-
-void update_savestate_deaths() {
-    if (validate::has_entered_goal()) {
-        s_ignore_state_load_flag = true;
-    }
-
-    if (should_increment_savestate_death_counter() && !s_has_incremented_death_counter) {
+    if (should_increment_savestate_death_counter()) {
         increment_world_death_counter();
     }
 }
@@ -119,8 +99,7 @@ void tick() {
         reset_flags();
     }
 
-    update_normal_deaths();
-    update_savestate_deaths();
+    count_deaths();
     update_flags_on_state_release();
 }
 
@@ -148,6 +127,19 @@ void disp() {
         draw::debug_text(COUNTER_NUMBER_X_POS, COUNTER_DISPLAY_Y_POS, draw::WHITE, "%d",
                          get_total_death_count());
     }
+    /*
+    u8 pos;
+    if (should_display_death_counter()) {
+        pos = 2;
+    } else {
+        pos = 0;
+    }
+    timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 1 + pos, 44, "Dbg:", 60 * 0, true, draw::WHITE);
+    timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 2 + pos, 44, "Sub:", 60 * mkb::sub_mode, true,
+                          draw::WHITE);
+    timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 3 + pos, 44,
+                          "Gol:", 60 * validate::is_postgoal_exact(), true, draw::WHITE);
+    */
 }
 
 }  // namespace deathcounter
