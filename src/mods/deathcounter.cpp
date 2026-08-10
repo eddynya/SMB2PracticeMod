@@ -20,15 +20,15 @@ constexpr u16 COUNTER_NUMBER_X_POS = COUNTER_DISPLAY_X_POS + 8 * 10;
 constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 
 static u32 s_world_death_count[WORLD_COUNT] = {};
-static bool s_can_incr_death_counter = false;  // flag for if we can increment the death counter
 
-static bool s_ignore_normal_deaths_flag = false;
+// Flags to determine when we should/shouldn't increment the death counter
+
+// "Normal" deaths refer to non-savestate related deaths
+// Default state for the normal deaths flag should be true when entering a stage since retrying
+// before first drop in shouldn't count as a death
+static bool s_ignore_normal_deaths_flag = true;
 static bool s_ignore_state_load_flag = false;
 static bool s_has_incremented_death_counter = false;
-// static bool s_is_holding_load_state = false;
-
-static bool s_can_die;
-static u32 s_death_count;
 
 u32 get_total_death_count() {
     u32 total = 0;
@@ -47,12 +47,13 @@ void increment_world_death_counter() {
         return;
     }
     s_world_death_count[mkb::scen_info.world] += 1;  // death counter for the current world
-    s_has_incremented_death_counter = true;  // set the flag to be true when calling this function
+    s_has_incremented_death_counter =
+        true;  // set the flag to be true when calling this function (if no early return)
 }
 
 void reset_flags() {
     s_ignore_normal_deaths_flag = true;
-    s_ignore_state_load_flag = true;
+    s_ignore_state_load_flag = false;
     s_has_incremented_death_counter = false;
 }
 
@@ -60,11 +61,14 @@ void reset_death_counters() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         s_world_death_count[k] = 0;
     }
+    reset_flags();
 }
 
 // When we're done holding the savestate button/when gameplay resumes
 void update_flags_on_state_release() {
     if (mode::is_gameplay(mkb::sub_mode) && !libsavest::state_loaded_this_frame()) {
+        // As soon as we're done holding the load state button (or just any time we're controlling
+        // the monkey on the stage), we're allowed to die
         s_has_incremented_death_counter = false;
         s_ignore_normal_deaths_flag = false;
         s_ignore_state_load_flag = false;
@@ -80,7 +84,6 @@ bool should_increment_normal_death_counter() {
     return (retried_without_clearing || left_stage_without_clearing || died);
 }
 
-// "Normal" deaths refer to non-savestate related deaths
 void update_normal_deaths() {
     if (validate::has_entered_goal()) {
         s_ignore_normal_deaths_flag = true;
@@ -91,58 +94,34 @@ void update_normal_deaths() {
     }
 }
 
+bool should_increment_savestate_death_counter() {
+    return libsavest::state_loaded_this_frame() && !s_ignore_state_load_flag;
+}
+
 void update_savestate_deaths() {
     if (validate::has_entered_goal()) {
         s_ignore_state_load_flag = true;
     }
 
-    // && !s_is_holding_load_state
-    if (libsavest::state_loaded_this_frame() && !s_ignore_state_load_flag &&
-        !s_has_incremented_death_counter) {
+    if (should_increment_savestate_death_counter() && !s_has_incremented_death_counter) {
         increment_world_death_counter();
     }
 }
 
 void tick() {
-    // set the death count to 0 on the file select screen
+    // Set the death count to 0 on the file select screen
     if (mode::is_storymode_file_screen_init(mkb::scen_info)) {
-        // s_death_count = 0;
-        // s_can_die = false;
         reset_death_counters();
+    }
+
+    // Whenever entering a new stage, reset our flags
+    if (mode::is_spin_in_first_init(mkb::sub_mode)) {
+        reset_flags();
     }
 
     update_normal_deaths();
     update_savestate_deaths();
     update_flags_on_state_release();
-
-    for (u16 k = 0; k < WORLD_COUNT; k++) {
-        // update_world_death_counter(k);
-    }
-
-    // Don't increment the death counter on stage 1 if the setting is ticked
-    /*
-    if (mkb::sub_mode == mkb::SMD_GAME_PLAY_MAIN && !validate::has_entered_goal()) {
-        if (pref::get(pref::BoolPref::CountFirstStageDeaths)) {
-            s_can_die = true;
-        } else if (!pref::get(pref::BoolPref::CountFirstStageDeaths) &&
-                   old_storytimer::get_completed_stagecount() != 0) {
-            s_can_die = true;
-        }
-    } else if (validate::has_entered_goal()) {
-        s_can_die = false;
-    } */
-    /* if (s_can_die &&
-        (mkb::sub_mode == mkb::SMD_GAME_READY_INIT || mkb::sub_mode == mkb::SMD_GAME_RINGOUT_INIT ||
-         mkb::sub_mode == mkb::SMD_GAME_TIMEOVER_INIT ||
-         mkb::sub_mode == mkb::SMD_GAME_SCENARIO_RETURN ||
-         mkb::sub_mode == mkb::SMD_GAME_INTR_SEL_INIT)) {
-        // you can die either by retrying after dropping in, falling out, timing over, stage
-        // selecting after dropping in (but before breaking the tape), or exiting game after
-        // dropping in (but before breaking the tape)
-        s_death_count += 1;
-        s_can_die = false;  // once the death counter is incremented, set this to false so we only
-                            // increment it by 1
-    } */
 }
 
 bool should_display_death_counter() {
@@ -165,29 +144,10 @@ void disp() {
     }
 
     if (should_display_death_counter()) {
-        draw::debug_text(COUNTER_DISPLAY_X_POS, COUNTER_DISPLAY_Y_POS, draw::WHITE, "Deaths: ");
+        draw::debug_text(COUNTER_DISPLAY_X_POS, COUNTER_DISPLAY_Y_POS, draw::WHITE, "Deaths:");
         draw::debug_text(COUNTER_NUMBER_X_POS, COUNTER_DISPLAY_Y_POS, draw::WHITE, "%d",
                          get_total_death_count());
     }
 }
-
-void update_world_death_counter(u16 world_idx) {
-    if (mode::is_gameplay_init(mkb::sub_mode)) {
-        s_can_incr_death_counter = true;  // allowed to increment the counter after dropping in
-    }
-    //
-    if (libsavest::state_loaded_this_frame() && !mode::is_postgoal(mkb::sub_mode)) {
-        s_world_death_count[world_idx] += 1;
-    }
-
-    if (mode::is_death_init(mkb::sub_mode) || mode::is_stage_exit_init(mkb::sub_mode)) {
-    }
-}
-
-/*
-bool should_increment_state_death_counter() {
-    return libsavest::state_loaded_this_frame() && !s_ignore_state_load_flag &&
-           !s_is_holding_load_state;
-} */
 
 }  // namespace deathcounter
