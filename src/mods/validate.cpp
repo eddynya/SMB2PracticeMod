@@ -11,9 +11,11 @@
 
 namespace validate {
 
+constexpr u8 TIME_BETWEEN_TAPE_BREAK_AND_GOAL_SUBMODE = 3;
 // calculate from did_ball_enter_goal for subtick timer
 static u32 s_framesave;
 // values for validation
+static u8 s_frames_until_goal_submode = 0;
 static bool s_entered_goal;
 static bool s_used_mods;
 static bool s_has_paused;
@@ -190,10 +192,24 @@ void init() {
                 // determine framesave percentage
                 find_framesave(ball, out_stage_goal_idx, out_itemgroup_id, out_goal_flags);
                 s_entered_goal = result;
+                s_frames_until_goal_submode = TIME_BETWEEN_TAPE_BREAK_AND_GOAL_SUBMODE;
+            }
+            // We don't need to check if we're paused because this function doesn't get run while
+            // paused
+            if (s_frames_until_goal_submode != 0) {
+                s_frames_until_goal_submode -= 1;
             }
             return result;
         });
 }
+
+// Remedy for goal submode checks being delayed from tape break
+bool is_postgoal_exact() {
+    return (s_frames_until_goal_submode != 0 && mode::is_gameplay_main(mkb::sub_mode)) ||
+           mode::is_postgoal(mkb::sub_mode);
+}
+
+bool is_gameplay_exact() { return mode::is_gameplay(mkb::sub_mode) && !is_postgoal_exact(); }
 
 bool has_entered_goal() { return s_entered_goal; }
 
@@ -210,6 +226,16 @@ void tick() {
         s_used_mods = false;
         s_has_paused = false;
         s_loaded_savestate = false;
+    }
+
+    // Handle cases where we pause (and either leave the stage or retry) or load state immediately
+    // after breaking the tape
+    // Note: savest_ui's tick gets run before validate's tick, so if we load state right after
+    // breaking the tape, there won't be a frame where we're in gameplay and
+    // s_frames_until_goal_submode is nonzero
+    if (mode::is_stage_exit_init(mkb::sub_mode) || libsavest::state_loaded_this_frame() ||
+        mode::is_spin_in_init(mkb::sub_mode)) {
+        s_frames_until_goal_submode = 0;
     }
 }
 
