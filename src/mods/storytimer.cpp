@@ -179,17 +179,17 @@ bool should_display_timer(TimerType type) {
 // Doing this for now until a better display setup is figured out
 u16 get_timer_y_pos(TimerType type) {  // maybe rename to get_timer_row()?
     u16 y_pos = STARTING_ROW;
-    bool show_death_counter = pref::get(pref::BoolPref::ShowDeathCounter);
+    bool is_displaying_death_counter = deathcounter::should_display_death_counter();
 
     if (type == TimerType::Fullgame) {
-        if (show_death_counter) {
+        if (is_displaying_death_counter) {
             y_pos++;
         }
     } else {  // Segment timer
         if (should_display_timer(TimerType::Fullgame)) {
             y_pos++;
         }
-        if (show_death_counter) {
+        if (is_displaying_death_counter) {
             y_pos++;
         }
     }
@@ -248,12 +248,14 @@ void draw_breakdown_screen() {  // TODO: death count per world
 
     for (u16 idx = 0; idx < WORLD_COUNT; idx++) {
         Vec2d pos = get_breakdown_row_position(idx);
+        u32 world_deaths = deathcounter::get_world_death_count(idx);
 
         timerdisp::format_time_to_buffer(split_buf[idx], get_split_timer_for_world(idx),
                                          timerdisp::TimeFormatType::MINUTES_ALWAYS_LEADING_ZERO);
         timerdisp::format_time_to_buffer(seg_buf[idx], s_timer_group[idx].segment,
                                          timerdisp::TimeFormatType::MINUTES_ALWAYS_LEADING_ZERO);
-        mkb::sprintf(row_info_buf[idx], "W%d:%s (%s)", idx + 1, split_buf[idx], seg_buf[idx]);
+        mkb::sprintf(row_info_buf[idx], "W%d:%s (%s) (%d)", idx + 1, split_buf[idx], seg_buf[idx],
+                     world_deaths);
 
         draw::debug_text(pos.x, pos.y, draw::WHITE, "%s", row_info_buf[idx]);
     }
