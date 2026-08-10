@@ -57,7 +57,7 @@ enum class BoolPref : u8 {
     JumpAllowWalljumps,
     CustomPhysicsDisp,
     ShowRunBreakdown,
-    ShowDeathCounter,
+    // ShowDeathCounter,
     CountFirstStageDeaths,
     MenuAcceleration,
 };
@@ -96,6 +96,7 @@ enum class U8Pref : u8 {
     JumpProfile,
     FullgameTimerOptions,
     SegmentTimerOptions,
+    DeathCounterDisplayOptions,
 };
 
 void init();

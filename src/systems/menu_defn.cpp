@@ -842,13 +842,22 @@ static Widget s_loadless_timers_widgets[] = {
     },
 };
 
+static const char* DEATH_COUNTER_OPTIONS[] = {
+    "Don't show",
+    "Always show",
+    "Between worlds",
+    "End of run",
+};
+
 static Widget s_deathcounter_widgets[] = {
     {
-        .type = WidgetType::Checkbox,
-        .checkbox =
+        .type = WidgetType::Choose,
+        .choose =
             {
-                .label = "Show Death Counter",
-                .pref = pref::BoolPref::ShowDeathCounter,
+                .label = "Death Counter",
+                .choices = DEATH_COUNTER_OPTIONS,
+                .num_choices = LEN(DEATH_COUNTER_OPTIONS),
+                .pref = pref::U8Pref::DeathCounterDisplayOptions,
             },
     },
     {

@@ -104,8 +104,8 @@ enum class PrefId : u16 {
     FullgameTimerOptions = 84,
     SegmentTimerOptions = 85,
     ShowRunBreakdown = 86,
-    ShowDeathCounter = 87,
-    CountFirstStageDeaths = 88,
+    CountFirstStageDeaths = 87,
+    DeathCounterDisplayOptions = 88,
     MenuAcceleration = 89,  // check with rehtrop if 88 is free
 };
 
@@ -194,8 +194,8 @@ static const PrefId s_pref_ids[] = {
     PrefId::FullgameTimerOptions,
     PrefId::SegmentTimerOptions,
     PrefId::ShowRunBreakdown,
-    PrefId::ShowDeathCounter,
     PrefId::CountFirstStageDeaths,
+    PrefId::DeathCounterDisplayOptions,
     PrefId::MenuAcceleration,
 };
 
@@ -299,8 +299,6 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::JumpAllowWalljumps;
         case PrefId::CustomPhysicsDisp:
             return BoolPref::CustomPhysicsDisp;
-        case PrefId::ShowDeathCounter:
-            return BoolPref::ShowDeathCounter;
         case PrefId::CountFirstStageDeaths:
             return BoolPref::CountFirstStageDeaths;
         case PrefId::MenuAcceleration:
@@ -380,6 +378,8 @@ static std::optional<U8Pref> pref_id_to_u8_pref(PrefId id) {
             return U8Pref::FullgameTimerOptions;
         case PrefId::SegmentTimerOptions:
             return U8Pref::SegmentTimerOptions;
+        case PrefId::DeathCounterDisplayOptions:
+            return U8Pref::DeathCounterDisplayOptions;
         default:
             return {};
     }
@@ -427,7 +427,7 @@ static DefaultU8Pref s_default_u8_prefs[] = {
 
 struct PrefState {
     u8 bool_prefs[8];
-    u8 u8_prefs[33];
+    u8 u8_prefs[34];
 };
 
 static PrefState s_pref_state, s_prev_pref_state, s_default_pref_state;

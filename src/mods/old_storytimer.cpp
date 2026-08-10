@@ -164,9 +164,9 @@ void disp() {
 
     // move the position of the fullgame timer if the death counter is on
     u32 fullgame_timer_location_y = 2;
-    if (pref::get(pref::BoolPref::ShowDeathCounter)) {
+    /* if (pref::get(pref::BoolPref::ShowDeathCounter)) {
         fullgame_timer_location_y++;
-    }
+    } */
 
     bool display_story_timer = false;
     switch (TimerOptions(pref::get(pref::U8Pref::FullgameTimerOptions))) {
@@ -222,9 +222,9 @@ void disp() {
     if (display_story_timer) {
         segment_timer_location_y++;
     }
-    if (pref::get(pref::BoolPref::ShowDeathCounter)) {
+    /* if (pref::get(pref::BoolPref::ShowDeathCounter)) {
         segment_timer_location_y++;
-    }
+    } */
 
     switch (TimerOptions(pref::get(pref::U8Pref::SegmentTimerOptions))) {
         case TimerOptions::AlwaysShow:
