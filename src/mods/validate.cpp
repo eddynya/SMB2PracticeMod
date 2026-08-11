@@ -12,16 +12,23 @@
 namespace validate {
 
 constexpr u8 TIME_BETWEEN_TAPE_BREAK_AND_GOAL_SUBMODE = 3;
+static u8 s_frames_until_goal_submode = 0;
+
+// true during postgoal, and true during game scenario return *if* we enter it after
+// successfully entering a goal
+static bool s_is_postgoal_extended = false;
+
 // calculate from did_ball_enter_goal for subtick timer
 static u32 s_framesave;
+
 // values for validation
-static u8 s_frames_until_goal_submode = 0;
 static bool s_entered_goal;
 static bool s_used_mods;
 static bool s_has_paused;
 static bool s_loaded_savestate;
 
 static patch::Tramp<decltype(&mkb::did_ball_enter_goal)> s_goal_tramp;
+static patch::Tramp<decltype(&mkb::mode_tick)> s_mode_tick_tramp;
 
 static constexpr pref::BoolPref INVALID_BOOL_PREFS[] = {
     pref::BoolPref::DisableFalloutVolumes,
@@ -181,6 +188,40 @@ void find_framesave(mkb::Ball* ball, int* out_stage_goal_idx, int* out_itemgroup
     } while (true);
 }
 
+bool has_entered_goal() { return s_entered_goal; }
+
+// Remedy for goal submode checks being delayed from tape break
+bool is_postgoal_exact() {
+    return (s_frames_until_goal_submode != 0 && mode::is_gameplay_main(mkb::sub_mode)) ||
+           mode::is_postgoal(mkb::sub_mode);
+}
+
+bool is_postgoal_exact_with_game_return() {
+    return is_postgoal_exact() || mode::is_game_scenario_return(mkb::sub_mode);
+}
+
+// Includes the game scenario return frame *if* we entered the goal before entering it
+// For example, if we stage select mid gameplay, this will return false on the game
+// scenario return frame
+bool is_postgoal_extended() { return is_postgoal_exact() || s_is_postgoal_extended; }
+
+bool is_gameplay_exact() { return mode::is_gameplay(mkb::sub_mode) && !is_postgoal_exact(); }
+
+// We can use is_postgoal_extended() to get the following useful status functions during a story
+// mode run (these are used in storytimer.cpp and deathcounter.cpp)
+
+bool is_between_worlds() { return mode::is_between_worlds(is_postgoal_extended()); }
+
+bool is_run_complete() { return mode::is_run_complete(is_postgoal_extended()); }
+
+void update_extended_postgoal_status() {
+    s_mode_tick_tramp.dest();
+    // Run this after the game updates the submode
+    if (!is_postgoal_exact_with_game_return()) {
+        s_is_postgoal_extended = false;
+    }
+}
+
 void init() {
     patch::hook_function(
         s_goal_tramp, &mkb::did_ball_enter_goal,
@@ -192,6 +233,7 @@ void init() {
                 // determine framesave percentage
                 find_framesave(ball, out_stage_goal_idx, out_itemgroup_id, out_goal_flags);
                 s_entered_goal = result;
+                s_is_postgoal_extended = result;
                 s_frames_until_goal_submode = TIME_BETWEEN_TAPE_BREAK_AND_GOAL_SUBMODE;
             }
             // We don't need to check if we're paused because this function doesn't get run while
@@ -201,24 +243,18 @@ void init() {
             }
             return result;
         });
+    patch::hook_function(s_mode_tick_tramp, mkb::mode_tick, update_extended_postgoal_status);
+
+    /*
+    []() {
+        s_mode_tick_tramp.dest();
+        if (!is_postgoal_exact_with_game_return()) {
+            s_is_postgoal_extended = false;
+        }
+    }
+
+    */
 }
-
-// Remedy for goal submode checks being delayed from tape break
-bool is_postgoal_exact() {
-    return (s_frames_until_goal_submode != 0 && mode::is_gameplay_main(mkb::sub_mode)) ||
-           mode::is_postgoal(mkb::sub_mode);
-}
-
-bool is_gameplay_exact() { return mode::is_gameplay(mkb::sub_mode) && !is_postgoal_exact(); }
-
-bool has_entered_goal() { return s_entered_goal; }
-
-// We can use has_entered_goal() to get the following useful status functions during a story mode
-// run (these are used in storytimer.cpp and deathcounter.cpp)
-
-bool is_between_worlds() { return mode::is_between_worlds(has_entered_goal()); }
-
-bool is_run_complete() { return mode::is_run_complete(has_entered_goal()); }
 
 void tick() {
     if (mkb::sub_mode == mkb::SMD_GAME_PLAY_INIT) {
