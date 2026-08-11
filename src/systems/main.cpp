@@ -4,6 +4,7 @@
 #include "systems/assembly.h"
 #include "systems/binds.h"
 #include "systems/cardio.h"
+#include "systems/goal.h"
 #include "systems/heap.h"
 #include "systems/menu_defn.h"
 #include "systems/menu_impl.h"
@@ -92,6 +93,7 @@ void init() {
     physics::init();
     iw::init();
     libsavest::init();
+    goal::init();
     timer::init();
     inputdisp::init();
     cmseg::init();
@@ -132,6 +134,7 @@ void init() {
         storytimer::tick();
         deathcounter::tick();
         savest_ui::tick();
+        goal::tick();
         menu_impl::tick();  // anything checking for pref changes should run after menu_impl::tick()
         fallout::tick();
         jump::tick();     // (edits physics preset)

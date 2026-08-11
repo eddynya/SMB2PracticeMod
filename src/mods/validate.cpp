@@ -244,16 +244,6 @@ void init() {
             return result;
         });
     patch::hook_function(s_mode_tick_tramp, mkb::mode_tick, update_extended_postgoal_status);
-
-    /*
-    []() {
-        s_mode_tick_tramp.dest();
-        if (!is_postgoal_exact_with_game_return()) {
-            s_is_postgoal_extended = false;
-        }
-    }
-
-    */
 }
 
 void tick() {
