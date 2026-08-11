@@ -1233,6 +1233,8 @@ static Widget s_savestate_widgets[] = {
     },
 };
 
+static const char* MENU_ACCEL_OPTIONS[] = {"Disabled", "Always enabled", "Only in story"};
+
 static Widget s_tools_widgets[] = {
     {
         .type = WidgetType::Button,
@@ -1292,11 +1294,13 @@ static Widget s_tools_widgets[] = {
             },
     },
     {
-        .type = WidgetType::Checkbox,
-        .checkbox =
+        .type = WidgetType::Choose,
+        .choose =
             {
                 .label = "Menu Acceleration",
-                .pref = pref::BoolPref::MenuAcceleration,
+                .choices = MENU_ACCEL_OPTIONS,
+                .num_choices = LEN(MENU_ACCEL_OPTIONS),
+                .pref = pref::U8Pref::MenuAcceleration,
             },
     },
 };

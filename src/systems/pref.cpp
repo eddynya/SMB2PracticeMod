@@ -301,8 +301,6 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::CustomPhysicsDisp;
         case PrefId::CountFirstStageDeaths:
             return BoolPref::CountFirstStageDeaths;
-        case PrefId::MenuAcceleration:
-            return BoolPref::MenuAcceleration;
         case PrefId::ShowRunBreakdown:
             return BoolPref::ShowRunBreakdown;
         default:
@@ -380,6 +378,8 @@ static std::optional<U8Pref> pref_id_to_u8_pref(PrefId id) {
             return U8Pref::SegmentTimerOptions;
         case PrefId::DeathCounterDisplayOptions:
             return U8Pref::DeathCounterDisplayOptions;
+        case PrefId::MenuAcceleration:
+            return U8Pref::MenuAcceleration;
         default:
             return {};
     }
@@ -427,7 +427,7 @@ static DefaultU8Pref s_default_u8_prefs[] = {
 
 struct PrefState {
     u8 bool_prefs[8];
-    u8 u8_prefs[34];
+    u8 u8_prefs[35];
 };
 
 static PrefState s_pref_state, s_prev_pref_state, s_default_pref_state;

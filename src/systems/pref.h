@@ -59,7 +59,7 @@ enum class BoolPref : u8 {
     ShowRunBreakdown,
     // ShowDeathCounter,
     CountFirstStageDeaths,
-    MenuAcceleration,
+    // MenuAcceleration,
 };
 
 enum class U8Pref : u8 {
@@ -97,6 +97,7 @@ enum class U8Pref : u8 {
     FullgameTimerOptions,
     SegmentTimerOptions,
     DeathCounterDisplayOptions,
+    MenuAcceleration,
 };
 
 void init();
