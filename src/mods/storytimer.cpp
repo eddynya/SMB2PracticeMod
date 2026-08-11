@@ -2,8 +2,7 @@
 
 #include "../mkb/mkb.h"
 
-#include "../mods/freecam.h"
-#include "../mods/validate.h"
+#include "../systems/goal.h"
 #include "../systems/pref.h"
 #include "../utils/draw.h"
 #include "../utils/macro_utils.h"
@@ -11,6 +10,7 @@
 #include "../utils/patch.h"
 #include "../utils/timerdisp.h"
 #include "deathcounter.h"
+#include "freecam.h"
 #include "validate.h"
 
 namespace storytimer {
@@ -66,7 +66,7 @@ bool should_segment_timer_run_on_stage(int world_idx) {
         return true;
     } else if (mkb::get_world_unbeaten_stage_count(world_idx) == STAGES_PER_WORLD - 1) {
         // Stop the world segment timer on tape break of the last stage of that world
-        return !validate::has_entered_goal();
+        return !goal::is_postgoal_extended();
     } else {
         return false;
     }
@@ -129,10 +129,6 @@ void tick() {
 
 // --- display stuff ---
 
-// To make things less verbose/cluttered
-// bool is_between_worlds() { return mode::is_between_worlds(validate::has_entered_goal()); }
-// bool is_run_complete() { return mode::is_run_complete(validate::has_entered_goal()); }
-
 // The run breakdown screen replaces the segment timer at the end of the run
 // if the pref for it is on
 bool should_display_timer(TimerType type) {
@@ -151,25 +147,25 @@ bool should_display_timer(TimerType type) {
                 return true;
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
                 // type is segment timer + show breakdown on
-                return !validate::is_run_complete();
+                return !goal::is_run_complete();
             } else {  // type is segment timer + show breakdown off
                 return true;
             }
         case TimerOptions::BetweenWorlds:
             if (type == TimerType::Fullgame) {
-                return validate::is_between_worlds();
+                return goal::is_between_worlds();
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                return validate::is_between_worlds() && !validate::is_run_complete();
+                return goal::is_between_worlds() && !goal::is_run_complete();
             } else {
-                return validate::is_between_worlds();
+                return goal::is_between_worlds();
             }
         case TimerOptions::EndOfRun:
             if (type == TimerType::Fullgame) {
-                return validate::is_run_complete();
+                return goal::is_run_complete();
             } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
                 return false;
             } else {
-                return validate::is_run_complete();
+                return goal::is_run_complete();
             }
         case TimerOptions::DontShow:
             return false;
@@ -241,7 +237,7 @@ Vec2d get_breakdown_row_position(u16 row) {
     }
 }
 
-void draw_breakdown_screen() {  // TODO: death count per world
+void draw_breakdown_screen() {  // TODO: totals row?
     char split_buf[WORLD_COUNT][32] = {};
     char seg_buf[WORLD_COUNT][32] = {};
     char row_info_buf[WORLD_COUNT][32] = {};  // Format: "Wk: split k-1 time (segment k-1 time)"
@@ -268,21 +264,21 @@ void disp() {
 
     draw_timers();
 
-    if (pref::get(pref::BoolPref::ShowRunBreakdown) && validate::is_run_complete()) {
+    if (pref::get(pref::BoolPref::ShowRunBreakdown) && goal::is_run_complete()) {
         draw_breakdown_screen();
     }
-
     /*
-    u16 pos_y = get_timer_y_pos(TimerType::Segment);
+        u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Dbg:", 60 * s_counter, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sta:", 60 * mkb::g_storymode_stageselect_state, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Scn:", 60 * mkb::scen_info.mode, true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Dbg:", 60 * should_segment_timer_run_on_stage(0), true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Pxt:", 60 * goal::is_postgoal_extended(), true, draw::WHITE);
+        timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
+                              "Exa:", 60 * goal::get_frames_until_goal_submode(), true,
+       draw::WHITE);
     */
 }
 

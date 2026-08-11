@@ -2,6 +2,7 @@
 
 #include "../mkb/mkb.h"
 
+#include "../systems/goal.h"
 #include "../systems/pref.h"
 #include "../utils/draw.h"
 #include "../utils/libsavest.h"
@@ -54,7 +55,7 @@ void reset_death_counters() {
 
 // When we're done holding the savestate button/when gameplay resumes
 void update_flags_on_state_release() {
-    if (validate::is_gameplay_exact() && !libsavest::state_loaded_this_frame()) {
+    if (goal::is_gameplay_exact() && !libsavest::state_loaded_this_frame()) {
         // As soon as we're done holding the load state button (or just any time we're controlling
         // the monkey on the stage), we're allowed to die
         s_can_incr_death_counter = true;
@@ -75,7 +76,7 @@ bool should_increment_savestate_death_counter() {
 }
 
 void count_deaths() {
-    if (validate::is_postgoal_exact()) {
+    if (goal::is_postgoal_exact()) {
         s_can_incr_death_counter = false;
     }
 
@@ -109,9 +110,9 @@ bool should_display_death_counter() {
         case DeathCounterOptions::AlwaysShow:
             return true;
         case DeathCounterOptions::BetweenWorlds:
-            return validate::is_between_worlds();
+            return goal::is_between_worlds();
         case DeathCounterOptions::EndOfRun:
-            return validate::is_run_complete();
+            return goal::is_run_complete();
         case DeathCounterOptions::DontShow:
             return false;
     }
@@ -138,7 +139,7 @@ void disp() {
     timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 2 + pos, 44, "Sub:", 60 * mkb::sub_mode, true,
                           draw::WHITE);
     timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 3 + pos, 44,
-                          "Gol:", 60 * validate::is_postgoal_exact(), true, draw::WHITE);
+                          "Gol:", 60 * goal::is_postgoal_exact(), true, draw::WHITE);
     */
 }
 
