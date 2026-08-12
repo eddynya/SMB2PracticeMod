@@ -27,8 +27,8 @@ constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 constexpr u16 STAGES_PER_WORLD = mode::STAGES_PER_WORLD;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // each world has its own TimerGroup structure
-static s8 s_active_save_file_idx = 0;
-static s8 s_last_active_world = 0;
+static s8 s_active_save_file_idx = 0;          // for handling resetting
+static s8 s_last_active_world = 0;             // for handling resetting
 
 // static u32 s_counter = 0;  // testing variable
 
@@ -62,6 +62,8 @@ void reset_timer() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         s_timer_group[k] = {};
     }
+    s_last_active_world = 0;
+    s_active_save_file_idx = 0;
     // mkb::OSReport("Reset timer \n");
 }
 
@@ -121,6 +123,7 @@ void update_timers_on_stage() {
     }
 }
 
+/*
 void update_save_file_idx() { s_active_save_file_idx = mkb::scen_info.save_file_idx; }
 
 void update_last_active_world() {
@@ -136,53 +139,45 @@ void update_run_status() {
         s_active_save_file_idx = mkb::scen_info.save_file_idx;
     }
 }
+*/
+
+// This only gets called during the exit game init
+// We store the world we were on + what file we were on so that we're able to properly handle
+// resetting on the file screen
+void record_run_status() {
+    s_last_active_world = mkb::scen_info.world;
+    s_active_save_file_idx = mkb::scen_info.save_file_idx;
+}
 
 // for if we fully exit game
 void update_timers_on_menus() {
     if ((mode::is_sel_ngc(mkb::sub_mode) || mode::is_storymode_file_screen_main(mkb::scen_info)) &&
-        s_last_active_world != -1 && is_run_active()) {
+        is_run_active()) {
         s_timer_group[s_last_active_world].full_world += 1;
-        if (mkb::get_world_unbeaten_stage_count(s_last_active_world) != STAGES_PER_WORLD) {
-            s_timer_group[s_last_active_world].segment =
-                s_timer_group[s_last_active_world].full_world;
-        }
+        s_timer_group[s_last_active_world].segment = s_timer_group[s_last_active_world].full_world;
     }
 }
 
-// reset detection stuff
-
-bool detect_enter_name_entry_on_wrong_file() {  // unused
-    return mkb::data_select_menu_state == mkb::DSMS_OPEN_DATA &&
-           mkb::scen_info.save_file_idx != s_active_save_file_idx &&
-           mode::is_storymode_name_entry_screen_main(mkb::scen_info);
-}
+// --- reset detection stuff ---
 
 bool detect_selecting_wrong_file() {
     return mkb::data_select_menu_state == mkb::DSMS_OPEN_DATA &&
            mkb::selected_story_file_idx != s_active_save_file_idx;
 }
 
-// bool detect_active_file_is_empty() {}
-
 // Catches using the IW picker on our current active file
 bool detect_wrong_world_on_active_file() {
-    bool wrong_world =
-        mkb::storymode_save_files[s_active_save_file_idx].current_world != s_last_active_world;
-    bool active_file_empty =
-        mkb::storymode_save_files[s_active_save_file_idx].playtime_in_frames == 0;
+    mkb::StoryModeSaveFile active_file = mkb::storymode_save_files[s_active_save_file_idx];
+    bool wrong_world = active_file.current_world != s_last_active_world;
+    bool active_file_empty = active_file.playtime_in_frames == 0;
     return wrong_world || active_file_empty;
 }
 
 void handle_resetting_on_file_screen() {
     if (mode::is_main_game_mode_story(mkb::main_game_mode) &&
         mode::is_storymode_file_screen_main(mkb::scen_info)) {
-        if (detect_wrong_world_on_active_file()) {
+        if (detect_wrong_world_on_active_file() || detect_selecting_wrong_file()) {
             // mkb::OSReport("bbbb \n");
-            reset_timer();
-        }
-
-        if (detect_selecting_wrong_file()) {
-            // mkb::OSReport("cccc \n");
             reset_timer();
         }
     }
@@ -200,7 +195,7 @@ void handle_selecting_wrong_menu() {
         mkb::MenuScreenID menu = mkb::g_currently_visible_menu_screen;
         if (menu == mkb::MENUSCREEN_NUMBER_OF_PLAYERS ||
             menu == mkb::MENUSCREEN_CHARACTER_SELECT_1 || menu == mkb::MENUSCREEN_MODE_SELECT) {
-            mkb::OSReport("eeee \n");
+            // mkb::OSReport("eeee \n");
             reset_timer();
         }
     }
@@ -213,9 +208,6 @@ void handle_go_to_story() {
     }
 }
 
-// bool detect_go_to_story() { return gotostory::get_gotostory_state() != gotostory::State::Default;
-// }
-
 void handle_completed_run_resetting() {
     if (mode::is_sel_ngc(mkb::sub_mode) || mode::is_titlescreen_main(mkb::sub_mode)) {
         if (goal::is_run_complete()) {
@@ -226,24 +218,7 @@ void handle_completed_run_resetting() {
 
 // mkb::storymode_save_files[mkb::selected_story_file_idx]
 void handle_resetting_timer() {
-    if (mode::is_main_game_mode_story(mkb::main_game_mode) &&
-        mode::is_storymode_file_screen_main(mkb::scen_info)) {
-        if (detect_wrong_world_on_active_file()) {
-            // mkb::OSReport("bbbb \n");
-            reset_timer();
-        }
-
-        if (detect_selecting_wrong_file()) {
-            // mkb::OSReport("cccc \n");
-            reset_timer();
-        }
-
-        /* if (detect_go_to_story()) {
-            mkb::OSReport("dddd \n");
-            reset_timer();
-        } */
-    }
-
+    handle_resetting_on_file_screen();
     handle_selecting_wrong_menu();
     handle_go_to_story();
     handle_completed_run_resetting();
@@ -253,12 +228,12 @@ void tick() {
     handle_resetting_timer();
 
     if (mode::is_main_game_mode_story(mkb::main_game_mode)) {
-        /* if (mode::is_storymode_file_screen_init(mkb::scen_info)) {
-            reset_timer();
-        } */
-
         update_timers_on_stage();
         update_timers_while_paused_on_10_ball_screen();
+
+        if (mode::is_story_exit_game_init(mkb::sub_mode)) {
+            record_run_status();
+        }
     }
 
     update_timers_on_menus();
@@ -345,6 +320,18 @@ TimerDisplayInfo get_timer_display_info(TimerType type) {
     }
 }
 
+u16 get_current_segment_idx() {
+    // mkb::scen_info.world gets reset to 0 on the file screen, so the only case we ever need to
+    // worry about is if we fully exit game and are on the file screen with the timer still running
+    if (mode::is_storymode_file_screen_main(mkb::scen_info) && get_loadless_time() != 0) {
+        return s_last_active_world;
+    } else {
+        // if we're in a run (not on the menus), this is the index of the current world (between 0
+        // and 9 inclusive)
+        return mkb::scen_info.world;
+    }
+}
+
 void draw_timers() {
     TimerDisplayInfo fullgame_info = get_timer_display_info(TimerType::Fullgame);
     u32 loadless_time = get_loadless_time();
@@ -355,7 +342,8 @@ void draw_timers() {
     }
 
     //  u16 world_idx = mkb::scen_info.world;
-    u16 world_idx = s_last_active_world;  // index of the current world (between 0 and 9 inclusive)
+    u16 world_idx =
+        get_current_segment_idx();  // index of the current world (between 0 and 9 inclusive)
     TimerDisplayInfo seg_info = get_timer_display_info(TimerType::Segment);
 
     if (should_display_timer(TimerType::Segment)) {
@@ -397,23 +385,22 @@ void draw_breakdown_screen() {  // TODO: totals row?
 
 bool should_not_display_timer_at_all() {
     u32 loadless_time = get_loadless_time();
-    /* if (!mode::is_main_game_mode_story(mkb::main_game_mode) && loadless_time == 0) {
-        return false;
-    }
-    if (!mode::is_main_game_mode_story(mkb::main_game_mode) || freecam::should_hide_hud()) {
-        return false;
-    } */
+    // The only time we can ever display the timer outside of story mode is
+    // when we fully exit game and the timer is still running
     if (!mode::is_main_game_mode_story(mkb::main_game_mode)) {
-        return loadless_time == 0 || freecam::should_hide_hud();
+        return loadless_time == 0;
     }
-    return false;
+    // If in story, the only time we shouldn't be displaying a timer on the screen
+    // is if we're freecamming (assuming the correct prefs are on)
+    return freecam::should_hide_hud();
 }
 
 // allowable menu screen ids
 // 7 (main game sel), 6 (char sel), 12 (file screen init?)
 void disp() {
-    if (!mode::is_main_game_mode_story(mkb::main_game_mode) || freecam::should_hide_hud()) {
-        // return;
+    // !mode::is_main_game_mode_story(mkb::main_game_mode) || freecam::should_hide_hud()
+    if (should_not_display_timer_at_all()) {
+        return;
     }
 
     draw_timers();
@@ -422,21 +409,23 @@ void disp() {
         draw_breakdown_screen();
     }
 
+    /*
     u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET, "Cur:",
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Fle:", 60 * s_active_save_file_idx, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Wor:", 60 * s_last_active_world, true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET, "Sub:",
                           60 * mkb::storymode_save_files[s_active_save_file_idx].current_world,
                           true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Fle:", 60 * mkb::scen_info.save_file_idx, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
                           "Mnu:", 60 * mkb::g_currently_visible_menu_screen, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 5, SEGMENT_TIMER_TEXT_OFFSET,
                           "Lwr:", 60 * s_last_active_world, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 6, SEGMENT_TIMER_TEXT_OFFSET,
                           "Sve:", 60 * s_active_save_file_idx, true, draw::WHITE);
+    */
 }
 
 // for easier timer testing
@@ -454,25 +443,8 @@ void init_main_loop() {
                          mkb::g_handle_storymode_stageselect_state, []() {
                              s_g_handle_storymode_stageselect_state_tramp.dest();
                              update_timers_on_10_ball_screen(mkb::g_storymode_stageselect_state);
-                             update_run_status();
+                             // update_run_status();
                          });
 }
-
-/*
-// && mode::is_storymode_file_screen_main(mkb::scen_info)
-        // mode::is_storymode_name_entry_screen_main(mkb::scen_info)
-        if (detect_enter_name_entry_on_wrong_file()) {
-            // mkb::scen_info.save_file_idx != s_active_save_file_idx
-
-            if (mkb::storymode_save_files[mkb::selected_story_file_idx].current_world !=
-                s_last_active_world) {
-                // mkb::OSReport("aaaa \n");
-            }
-
-            // reset_timer();
-            // mkb::OSReport("aaaa \n");
-        }
-
-*/
 
 }  // namespace storytimer

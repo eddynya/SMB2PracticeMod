@@ -38,6 +38,7 @@ bool is_sel_ngc(mkb::SubMode submode);
 bool is_game_scenario_main(mkb::SubMode submode);
 bool is_game_scenario_return(mkb::SubMode submode);
 bool is_titlescreen_main(mkb::SubMode submode);
+bool is_story_exit_game_init(mkb::SubMode submode);
 bool is_story_exit_game(mkb::SubMode submode);
 bool is_stage_exit_init(mkb::SubMode submode);
 bool is_stage_exit_submode(mkb::SubMode submode);
