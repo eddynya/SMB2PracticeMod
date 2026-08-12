@@ -68,12 +68,14 @@ void reset_timer() {
 }
 
 // Places where the segment timer should run while we're on a stage
-bool should_segment_timer_run_on_stage(int world_idx) {
+bool should_segment_timer_run_on_stage(int world_idx) {  // TODO: can just use
+                                                         // goal::is_between_worlds() I believe
     if (mkb::get_world_unbeaten_stage_count(world_idx) < STAGES_PER_WORLD - 1) {
         return true;
     } else if (mkb::get_world_unbeaten_stage_count(world_idx) == STAGES_PER_WORLD - 1) {
         // Stop the world segment timer on tape break of the last stage of that world
-        return !goal::is_postgoal_extended();
+        // return !goal::is_postgoal_extended();
+        return !goal::has_entered_goal();
     } else {
         return false;
     }
@@ -115,7 +117,8 @@ void update_timers_on_stage() {
             if (mode::is_on_stage(mkb::sub_mode) || mode::is_story_exit_game(mkb::sub_mode)) {
                 s_timer_group[k].full_world += 1;
 
-                if (should_segment_timer_run_on_stage(k)) {
+                // should_segment_timer_run_on_stage(k)
+                if (!goal::is_between_worlds()) {
                     s_timer_group[k].segment = s_timer_group[k].full_world;
                 }
             }
@@ -409,13 +412,12 @@ void disp() {
         draw_breakdown_screen();
     }
 
-    /*
     u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Fle:", 60 * s_active_save_file_idx, true, draw::WHITE);
+                          "Gol:", 60 * goal::has_entered_goal(), true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Wor:", 60 * s_last_active_world, true, draw::WHITE);
+                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET, "Sub:",
                           60 * mkb::storymode_save_files[s_active_save_file_idx].current_world,
                           true, draw::WHITE);
@@ -425,7 +427,6 @@ void disp() {
                           "Lwr:", 60 * s_last_active_world, true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 6, SEGMENT_TIMER_TEXT_OFFSET,
                           "Sve:", 60 * s_active_save_file_idx, true, draw::WHITE);
-    */
 }
 
 // for easier timer testing
