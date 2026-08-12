@@ -121,6 +121,8 @@ bool is_on_stage_with_endpoints(mkb::SubMode submode) {
 
 bool is_sel_ngc_init(mkb::SubMode submode) { return (submode == mkb::SMD_SEL_NGC_INIT); }
 
+bool is_sel_ngc_main(mkb::SubMode submode) { return submode == mkb::SMD_SEL_NGC_MAIN; }
+
 bool is_sel_ngc(mkb::SubMode submode) {
     return (submode == mkb::SMD_SEL_NGC_INIT || submode == mkb::SMD_SEL_NGC_MAIN);
 }
@@ -326,10 +328,10 @@ u16 get_storymode_total_clear_count() {
 }
 
 // Some notes
-// (1) In the actual use cases of these next 2 functions, we pass in validate::has_entered_goal();
-// however, we've opted to write the functions here using a generic bool argument so that mode.cpp
-// doesn't depend on/have to include validate.h
-// (2) When passing in validate::has_entered_goal(), this function will return true the
+// (1) In the actual use cases of these next 2 functions, we pass in goal::is_postgoal_extended();
+// however, we've opted to write the functions here using a generic bool argument for slightly more
+// generality
+// (2) When passing in goal::is_postgoal_extended(), this function will return true the
 // moment we break the tape on the last stage of a world, all the way until we enter the next
 // world's 10 ball screen (in particular, this includes the cutscene between worlds)
 bool is_between_worlds(bool has_entered_goal) {

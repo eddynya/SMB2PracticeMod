@@ -17,7 +17,7 @@ static u8 s_frames_until_goal_submode = 0;
 
 // true during postgoal (starting at tape break), and true during game scenario return *if* we enter
 // it after successfully entering a goal
-static bool s_is_postgoal_extended = false;
+static bool s_is_postgoal_extended = false;  // should we rename this to s_has_entered_goal?
 
 static patch::Tramp<decltype(&mkb::did_ball_enter_goal)> s_goal_tramp;
 static patch::Tramp<decltype(&mkb::mode_tick)> s_mode_tick_tramp;

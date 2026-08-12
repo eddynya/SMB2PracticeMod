@@ -33,6 +33,7 @@ bool is_on_stage_with_endpoints(mkb::SubMode submode);
 // other submodes
 
 bool is_sel_ngc_init(mkb::SubMode submode);
+bool is_sel_ngc_main(mkb::SubMode submode);
 bool is_sel_ngc(mkb::SubMode submode);
 bool is_game_scenario_main(mkb::SubMode submode);
 bool is_game_scenario_return(mkb::SubMode submode);
