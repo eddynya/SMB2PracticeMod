@@ -12,6 +12,7 @@ constexpr mkb::GXColor RED = {0xfd, 0x68, 0x75, 0xff};
 constexpr mkb::GXColor LIGHT_RED = {0xff, 0x77, 0x71, 0xff};
 constexpr mkb::GXColor ORANGE = {0xfd, 0xac, 0x68, 0xff};
 constexpr mkb::GXColor BLUE = {0x9d, 0xe3, 0xff, 0xff};
+constexpr mkb::GXColor TEAL = {0x00, 0xc9, 0xff, 0xff};
 constexpr mkb::GXColor PINK = {0xdf, 0x7f, 0xfa, 0xff};
 constexpr mkb::GXColor PURPLE = {0xb1, 0x5a, 0xff, 0xff};
 constexpr mkb::GXColor GREEN = {0x00, 0xff, 0x00, 0xff};
@@ -49,5 +50,7 @@ mkb::GXColor num_to_rainbow(int num);
 
 // Show a notification in the bottom-right of the screen which fades out after a short period
 void notify(mkb::GXColor color, const char* format, ...);
+// Version with a customizable position and an option to guard it against other notify() calls
+void notify_with_guard_and_y_pos(s32 row, bool guard, mkb::GXColor color, const char* format, ...);
 
 }  // namespace draw

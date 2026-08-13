@@ -12,6 +12,9 @@ namespace draw {
 
 static char s_notify_msg_buf[80];
 static s32 s_notify_frame_counter;
+static bool s_guard_notification;  // when true, prevent all other notify() calls from doing
+                                   // anything
+static Vec2d s_notify_pos = {0, 0};
 static mkb::GXColor s_notify_color;
 
 void init() {
@@ -167,26 +170,52 @@ mkb::GXColor num_to_rainbow(int num) {
 }
 
 void disp() {
-    s32 notify_len = mkb::strlen(s_notify_msg_buf);
-    s32 draw_x = 640 - notify_len * DEBUG_CHAR_WIDTH - 12;
-    s32 draw_y = 426;
     mkb::GXColor color = s_notify_color;
 
     if (s_notify_frame_counter > 40) {
         color.a = 0xff - (s_notify_frame_counter - 40) * 0xff / 20;
     }
-    debug_text(draw_x, draw_y, color, s_notify_msg_buf);
+    debug_text(s_notify_pos.x, s_notify_pos.y, color, s_notify_msg_buf);
 
     s_notify_frame_counter++;
     if (s_notify_frame_counter > 60) s_notify_frame_counter = 60;
+
+    if (s_guard_notification && s_notify_frame_counter == 60) {
+        // Once the guarded notification is done displaying, we're allowed to display things from
+        // other notify() calls again
+        s_guard_notification = false;
+    }
 }
 
 void notify(mkb::GXColor color, const char* format, ...) {
+    if (!s_guard_notification) {
+        va_list args;
+        va_start(args, format);
+        mkb::vsprintf(s_notify_msg_buf, const_cast<char*>(format), args);
+        va_end(args);
+
+        s32 notify_len = mkb::strlen(s_notify_msg_buf);
+
+        s_notify_pos = {640 - notify_len * DEBUG_CHAR_WIDTH - 12, 426};
+        s_notify_frame_counter = 0;
+        s_notify_color = color;
+    }
+}
+
+// For if we want to use notify() with a custom y pos (and with the same x pos behavior as
+// notify()), and with the option to prioritize it over any other notify() calls
+void notify_with_guard_and_y_pos(s32 row, bool guard, mkb::GXColor color, const char* format, ...) {
     va_list args;
     va_start(args, format);
     mkb::vsprintf(s_notify_msg_buf, const_cast<char*>(format), args);
     va_end(args);
 
+    s32 notify_len = mkb::strlen(s_notify_msg_buf);
+    s32 x_pos = 640 - notify_len * DEBUG_CHAR_WIDTH - 12;
+    s32 y_pos = 426 - (24 + 16 * row);
+
+    s_guard_notification = guard;
+    s_notify_pos = {x_pos, y_pos};
     s_notify_frame_counter = 0;
     s_notify_color = color;
 }
