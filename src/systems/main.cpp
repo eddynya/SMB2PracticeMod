@@ -40,6 +40,7 @@
 #include "mods/scratch.h"
 #include "mods/sfx.h"
 #include "mods/stage_edits.h"
+#include "mods/storyreset.h"
 #include "mods/storytimer.h"
 #include "mods/tetris.h"
 #include "mods/timer.h"
@@ -131,10 +132,10 @@ void init() {
         unlock::tick();
         iw::tick();
         // old_storytimer::tick();
+        storyreset::tick();
         storytimer::tick();
         deathcounter::tick();
         savest_ui::tick();
-        goal::tick();
         menu_impl::tick();  // anything checking for pref changes should run after menu_impl::tick()
         fallout::tick();
         jump::tick();     // (edits physics preset)
