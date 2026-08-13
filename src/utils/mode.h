@@ -64,8 +64,8 @@ bool is_story_cutscene(mkb::SubMode submode);
 
 u16 get_clear_count_for_world();
 u16 get_storymode_total_clear_count();
-bool is_between_worlds(bool has_entered_goal);
-bool is_run_complete(bool has_entered_goal);
+// bool is_between_worlds(bool has_entered_goal);
+// bool is_run_complete(bool has_entered_goal);
 
 // misc utility
 

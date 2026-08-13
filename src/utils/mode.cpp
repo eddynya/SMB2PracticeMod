@@ -334,7 +334,7 @@ u16 get_storymode_total_clear_count() {
 // (2) When passing in goal::is_postgoal_extended(), this function will return true the
 // moment we break the tape on the last stage of a world, all the way until we enter the next
 // world's 10 ball screen (in particular, this includes the cutscene between worlds)
-bool is_between_worlds(bool has_entered_goal) {
+/* bool is_between_worlds(bool has_entered_goal) {
     u16 world_clear_count = get_clear_count_for_world();
     if ((world_clear_count == STAGES_PER_WORLD - 1) && has_entered_goal) {
         return true;
@@ -346,6 +346,6 @@ bool is_between_worlds(bool has_entered_goal) {
 
 bool is_run_complete(bool has_entered_goal) {
     return (mkb::scen_info.world == WORLD_COUNT - 1) && is_between_worlds(has_entered_goal);
-}
+} */
 
 }  // namespace mode

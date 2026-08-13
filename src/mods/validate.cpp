@@ -20,7 +20,6 @@ static bool s_has_paused;
 static bool s_loaded_savestate;
 
 static patch::Tramp<decltype(&mkb::did_ball_enter_goal)> s_goal_tramp;
-static patch::Tramp<decltype(&mkb::mode_tick)> s_mode_tick_tramp;
 
 static constexpr pref::BoolPref INVALID_BOOL_PREFS[] = {
     pref::BoolPref::DisableFalloutVolumes,
