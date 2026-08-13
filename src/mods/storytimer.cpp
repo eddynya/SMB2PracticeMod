@@ -12,6 +12,7 @@
 #include "deathcounter.h"
 #include "freecam.h"
 #include "gotostory.h"
+#include "storyreset.h"
 #include "validate.h"
 
 namespace storytimer {
@@ -64,11 +65,12 @@ void reset_timer() {
     }
     s_last_active_world = 0;
     s_active_save_file_idx = 0;
+    storyreset::reset_active_run_info();
     // mkb::OSReport("Reset timer \n");
 }
 
 // Places where the segment timer should run while we're on a stage
-bool should_segment_timer_run_on_stage(int world_idx) {  // TODO: can just use
+/* bool should_segment_timer_run_on_stage(int world_idx) {  // TODO: can just use
                                                          // goal::is_between_worlds() I believe
     if (mkb::get_world_unbeaten_stage_count(world_idx) < STAGES_PER_WORLD - 1) {
         return true;
@@ -79,7 +81,7 @@ bool should_segment_timer_run_on_stage(int world_idx) {  // TODO: can just use
     } else {
         return false;
     }
-}
+} */
 
 // Importantly, we don't increment the timer on the 10 ball screen after selecting a stage
 // since the time between doing so and entering the next stage can be highly variable
@@ -118,6 +120,7 @@ void update_timers_on_stage() {
                 s_timer_group[k].full_world += 1;
 
                 // should_segment_timer_run_on_stage(k)
+                // Increment the segment timer until tape breek on the last stage of the world
                 if (!goal::is_between_worlds()) {
                     s_timer_group[k].segment = s_timer_group[k].full_world;
                 }
@@ -156,8 +159,9 @@ void record_run_status() {
 void update_timers_on_menus() {
     if ((mode::is_sel_ngc(mkb::sub_mode) || mode::is_storymode_file_screen_main(mkb::scen_info)) &&
         is_run_active()) {
-        s_timer_group[s_last_active_world].full_world += 1;
-        s_timer_group[s_last_active_world].segment = s_timer_group[s_last_active_world].full_world;
+        u8 active_world_idx = storyreset::get_active_world();
+        s_timer_group[active_world_idx].full_world += 1;
+        s_timer_group[active_world_idx].segment = s_timer_group[active_world_idx].full_world;
     }
 }
 
@@ -228,7 +232,10 @@ void handle_resetting_timer() {
 }
 
 void tick() {
-    handle_resetting_timer();
+    // handle_resetting_timer();
+    if (storyreset::should_reset_run()) {
+        reset_timer();
+    }
 
     if (mode::is_main_game_mode_story(mkb::main_game_mode)) {
         update_timers_on_stage();
@@ -327,7 +334,8 @@ u16 get_current_segment_idx() {
     // mkb::scen_info.world gets reset to 0 on the file screen, so the only case we ever need to
     // worry about is if we fully exit game and are on the file screen with the timer still running
     if (mode::is_storymode_file_screen_main(mkb::scen_info) && get_loadless_time() != 0) {
-        return s_last_active_world;
+        // return s_last_active_world;
+        return storyreset::get_active_world();
     } else {
         // if we're in a run (not on the menus), this is the index of the current world (between 0
         // and 9 inclusive)
@@ -412,21 +420,20 @@ void disp() {
         draw_breakdown_screen();
     }
 
-    u16 pos_y = get_timer_y_pos(TimerType::Segment);
+    /* u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Gol:", 60 * goal::has_entered_goal(), true, draw::WHITE);
+                          "Fra:", 60 * goal::get_frames_until_goal_submode(), true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET, "Sub:",
-                          60 * mkb::storymode_save_files[s_active_save_file_idx].current_world,
-                          true, draw::WHITE);
+                          "Gsr:", 60 * goal::get_goal_flag_game_return(), true, draw::WHITE);
+    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
+                          "Ext:", 60 * goal::get_goal_flag_exit_game(), true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Mnu:", 60 * mkb::g_currently_visible_menu_screen, true, draw::WHITE);
+                          "Lst:", 60 * goal::get_goal_flag_last_stage(), true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 5, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Lwr:", 60 * s_last_active_world, true, draw::WHITE);
+                          "Pxt:", 60 * goal::is_postgoal_exact(), true, draw::WHITE);
     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 6, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sve:", 60 * s_active_save_file_idx, true, draw::WHITE);
+                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE); */
 }
 
 // for easier timer testing
