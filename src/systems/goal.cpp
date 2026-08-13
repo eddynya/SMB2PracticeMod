@@ -109,7 +109,7 @@ bool did_ball_enter_goal_hook(mkb::Ball* ball, int* out_stage_goal_idx, int* out
 void mode_tick_hook() {
     s_mode_tick_tramp.dest();
     // Run this after the game updates the submode
-    // This ensurs that our flags that should get unset during game scenario main
+    // This ensures that our flags that should get unset during game scenario main
     // get unset after the submode switch (and so there isn't a frame where they
     // are true when they shouldn't be)
     reset_tape_break_counter();
@@ -133,6 +133,8 @@ void init() {
 // Due to the run order notes earlier, when the submode switches to game scenario main, first our
 // flag gets updated, then the clear count increments, and then disp() functions run
 
+// To allow for the possibility of passing in different goal flags, we phrase the next function
+// using a generic bool argument
 bool is_between_worlds_main(bool goal_flag) {
     u16 world_clear_count = mode::get_clear_count_for_world();
     if ((world_clear_count == STAGES_PER_WORLD - 1) && goal_flag) {
@@ -148,8 +150,10 @@ bool is_between_worlds_main(bool goal_flag) {
 // (1) If we exit game after completing the last stage and then return to the menu, we want our run
 // to still be flagged as complete (so that we know we should reset the run instead of running the
 // timer, due to how we handle resetting/not resetting the run if we fully exit game)
-// (2) We can't use s_goal_flag_retry for every world, however, because of the possibility of first
-// framing the last stage of a world and returning to the 10 ball screen
+// (2) We can't use s_goal_flag_last_stage for every world, however, because of the possibility of
+// doing an accidental (full) exit game all the way back out to the menus on the last stage of a
+// world. If this happens, the game doesn't count the stage as cleared and you would need to reclear
+// it. Using different flags solves this edge case behavior
 
 bool is_between_worlds() {
     u8 curr_world = mkb::scen_info.world;

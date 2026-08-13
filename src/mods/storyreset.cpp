@@ -1,6 +1,7 @@
 #include "storyreset.h"
 
 #include "../systems/goal.h"
+#include "../utils/draw.h"
 #include "../utils/mode.h"
 #include "gotostory.h"
 
@@ -99,6 +100,11 @@ void tick() {
         mode::is_story_exit_game_init(mkb::sub_mode)) {
         record_run_status();
     }
+}
+
+void display_reset_run_message() {
+    // TODO: pref
+    draw::notify(draw::WHITE, "Run was reset");
 }
 
 // TODO: message when run is reset

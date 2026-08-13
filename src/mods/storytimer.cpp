@@ -3,6 +3,7 @@
 #include "../mkb/mkb.h"
 
 #include "../systems/goal.h"
+#include "../systems/pad.h"
 #include "../systems/pref.h"
 #include "../utils/draw.h"
 #include "../utils/macro_utils.h"
@@ -17,6 +18,10 @@
 
 namespace storytimer {
 
+constexpr Vec2d TIMER_VER_POS = {450, 24 + 16 * 25};  // {634, 464}
+constexpr Vec2d TIMER_VER_SCALE = {0.8, 0.8};
+constexpr mkb::SpriteAlignment TIMER_VER_ALIGNMENT = mkb::ALIGN_UPPER_LEFT;
+
 constexpr u16 FULLGAME_TIMER_LOCATION_X = 18 + 24;
 constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 56;
 constexpr u16 SEGMENT_TIMER_LOCATION_X = 30 + 24;
@@ -28,6 +33,7 @@ constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 constexpr u16 STAGES_PER_WORLD = mode::STAGES_PER_WORLD;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // timer info for each world
+static bool s_displayed_timer_mark_this_run = false;
 
 // --- some getters that other files can use (if needed) ---
 
@@ -55,11 +61,15 @@ bool is_run_active() { return get_loadless_time() != 0 && !goal::is_run_complete
 // --- main timer logic ---
 
 void reset_timer() {
-    for (u16 k = 0; k < WORLD_COUNT; k++) {
-        s_timer_group[k] = {};
+    if (get_loadless_time() != 0) {
+        for (u16 k = 0; k < WORLD_COUNT; k++) {
+            s_timer_group[k] = {};
+        }
+        storyreset::reset_active_run_info();
+        storyreset::display_reset_run_message();
+        s_displayed_timer_mark_this_run = false;
+        // mkb::OSReport("Reset timer \n");
     }
-    storyreset::reset_active_run_info();
-    // mkb::OSReport("Reset timer \n");
 }
 
 // Importantly, we don't increment the timer on the 10 ball screen after selecting a stage
@@ -276,7 +286,28 @@ void draw_breakdown_screen() {  // TODO: totals row?
     }
 }
 
-void draw_timer_version() {}
+void draw_timer_version() {
+    TimerOptions fullgame_pref = TimerOptions(pref::get(pref::U8Pref::FullgameTimerOptions));
+    TimerOptions segment_pref = TimerOptions(pref::get(pref::U8Pref::SegmentTimerOptions));
+    bool breakdown_pref = pref::get(pref::BoolPref::ShowRunBreakdown);
+
+    if (s_displayed_timer_mark_this_run) {
+        return;
+    }
+
+    // If any of our timer prefs are enabled and we haven't displayed yet, display
+    if (fullgame_pref != TimerOptions::DontShow || segment_pref != TimerOptions::DontShow ||
+        breakdown_pref) {
+        if (goal::is_run_complete() && !s_displayed_timer_mark_this_run) {
+            char version_buf[16] = {};
+            mkb::sprintf(version_buf, "Timer v%d.%d.%d", LOADLESS_TIMER_VERSION.major,
+                         LOADLESS_TIMER_VERSION.minor, LOADLESS_TIMER_VERSION.patch);
+            draw::notify_with_guard_and_y_pos(0, true, draw::GRAY, version_buf);
+
+            s_displayed_timer_mark_this_run = true;
+        }
+    }
+}
 
 bool should_not_display_timer_at_all() {
     u32 loadless_time = get_loadless_time();
@@ -297,25 +328,26 @@ void disp() {
     }
 
     draw_timers();
+    draw_timer_version();
 
     if (pref::get(pref::BoolPref::ShowRunBreakdown) && goal::is_run_complete()) {
         draw_breakdown_screen();
     }
 
-    /* u16 pos_y = get_timer_y_pos(TimerType::Segment);
+    /*  u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Fra:", 60 * goal::get_frames_until_goal_submode(), true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Gsr:", 60 * goal::get_goal_flag_game_return(), true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Ext:", 60 * goal::get_goal_flag_exit_game(), true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Lst:", 60 * goal::get_goal_flag_last_stage(), true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 5, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Pxt:", 60 * goal::is_postgoal_exact(), true, draw::WHITE);
-    timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 6, SEGMENT_TIMER_TEXT_OFFSET,
-                          "Sub:", 60 * mkb::sub_mode, true, draw::WHITE); */
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Mar:", 60 * s_displayed_timer_mark_this_run, true, draw::WHITE);
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Gsr:", 60 * goal::get_goal_flag_game_return(), true, draw::WHITE);
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Ext:", 60 * goal::get_goal_flag_exit_game(), true, draw::WHITE);
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Lst:", 60 * goal::get_goal_flag_last_stage(), true, draw::WHITE);
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 5, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Pxt:", 60 * goal::is_postgoal_exact(), true, draw::WHITE);
+     timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 6, SEGMENT_TIMER_TEXT_OFFSET,
+                           "Sub:", 60 * mkb::sub_mode, true, draw::WHITE); */
 }
 
 // for easier timer testing
