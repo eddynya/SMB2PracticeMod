@@ -10,6 +10,7 @@
 #include "../utils/patch.h"
 #include "../utils/timerdisp.h"
 #include "freecam.h"
+#include "storyreset.h"
 #include "validate.h"
 
 namespace deathcounter {
@@ -90,8 +91,7 @@ void count_deaths() {
 }
 
 void tick() {
-    // Set the death count to 0 on the file select screen
-    if (mode::is_storymode_file_screen_init(mkb::scen_info)) {
+    if (storyreset::should_reset_run()) {
         reset_death_counters();
     }
 
@@ -118,8 +118,17 @@ bool should_display_death_counter() {
     }
 }
 
+bool should_not_display_counter_at_all() {
+    if (!mode::is_main_game_mode_story(mkb::main_game_mode)) {
+        // If we're in the menus outside of a story mode run due to an accidental exit game, we
+        // still want to be able to display the counter if we haven't reset it yet
+        return !storyreset::is_run_active();
+    }
+    return freecam::should_hide_hud();
+}
+
 void disp() {
-    if (!mode::is_main_game_mode_story(mkb::main_game_mode) || freecam::should_hide_hud()) {
+    if (should_not_display_counter_at_all()) {
         return;
     }
 
@@ -128,19 +137,19 @@ void disp() {
         draw::debug_text(COUNTER_NUMBER_X_POS, COUNTER_DISPLAY_Y_POS, draw::WHITE, "%d",
                          get_total_death_count());
     }
-    /*
-    u8 pos;
+
+    /* u8 pos;
     if (should_display_death_counter()) {
         pos = 2;
     } else {
         pos = 0;
     }
-    timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 1 + pos, 44, "Dbg:", 60 * 0, true, draw::WHITE);
+    timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 1 + pos, 44,
+                          "Dbg:", 60 * storyreset::is_run_active(), true, draw::WHITE);
     timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 2 + pos, 44, "Sub:", 60 * mkb::sub_mode, true,
                           draw::WHITE);
     timerdisp::draw_timer(COUNTER_DISPLAY_X_POS, 3 + pos, 44,
-                          "Gol:", 60 * goal::is_postgoal_exact(), true, draw::WHITE);
-    */
+                          "Gol:", 60 * goal::is_postgoal_exact(), true, draw::WHITE); */
 }
 
 }  // namespace deathcounter

@@ -6,15 +6,25 @@
 
 namespace storyreset {
 
-// This file is used by both storytimer.cpp and deathcounter.cpp to determine when to reset the run,
-// since we want to allow the possibility for accidentally exit game-ing back to the menus but still
-// have the run be considered "active"
+// This file is used by both storytimer.cpp and deathcounter.cpp to determine when to reset the run
+// since we want to allow the possibility for accidental exit games taking us back to the menus but
+// still have the run be considered "active"
 
+static bool s_is_run_active = false;
 static u8 s_active_save_file_idx = 0;  // for handling resetting
 static u8 s_last_active_world = 0;     // for handling resetting
 
+bool is_run_active() { return s_is_run_active; }
 u8 get_active_file_index() { return s_active_save_file_idx; }
 u8 get_active_world() { return s_last_active_world; }
+
+void set_run_active_status(bool is_active) {
+    // setter that is called in storytimer.cpp so that deathcounter.cpp can know whether the run is
+    // active or not without having access to the stuff in storytimer.cpp (checking for loadless
+    // time being nonzero works to see if a run is active, but checking for deaths being nonzero
+    // doesn't work)
+    s_is_run_active = is_active;
+}
 
 void reset_active_run_info() {
     s_active_save_file_idx = 0;
@@ -28,6 +38,8 @@ void record_run_status() {
     s_last_active_world = mkb::scen_info.world;
     s_active_save_file_idx = mkb::scen_info.save_file_idx;
 }
+
+// --- checks for if we should reset ---
 
 bool detect_selecting_wrong_file() {
     return mkb::data_select_menu_state == mkb::DSMS_OPEN_DATA &&
@@ -55,6 +67,8 @@ menu != mkb::MENUSCREEN_CHARACTER_SELECT_2 ||
             menu != mkb::MENUSCREEN_MAIN_GAME_SELECT ||
             menu != mkb::MENUSCREEN_STORY_MODE_SELECTED || menu != mkb::MENUSCREEN_MODE_SELECT
 */
+// allowable menu screen ids
+// 7 (main game sel), 6 (char sel), 12 (file screen init?)
 
 // If we select practice mode, challenge mode, or go back to the main menu
 bool is_on_wrong_menu() {
@@ -75,7 +89,6 @@ bool should_reset_completed_run() {
     return false;
 }
 
-// mkb::storymode_save_files[mkb::selected_story_file_idx]
 bool should_reset_run() {
     return should_reset_on_file_screen() || is_on_wrong_menu() || used_go_to_story() ||
            should_reset_completed_run();
@@ -88,6 +101,7 @@ void tick() {
     }
 }
 
+// TODO: message when run is reset
 void disp() {}
 
 }  // namespace storyreset
