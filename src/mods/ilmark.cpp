@@ -3,7 +3,9 @@
 #include "mkb/mkb.h"
 #include "mods/freecam.h"
 #include "mods/physics.h"
+#include "mods/storyreset.h"
 #include "mods/validate.h"
+#include "systems/goal.h"
 #include "systems/menu_impl.h"
 #include "systems/pad.h"
 #include "systems/pref.h"
@@ -11,9 +13,16 @@
 #include "utils/draw.h"
 #include "utils/libsavest.h"
 #include "utils/macro_utils.h"
+#include "utils/mode.h"
 #include "utils/patch.h"
 
 namespace ilmark {
+
+enum class StoryIlMarkSettings {
+    DontShow,
+    AlwaysInStory,
+    AtRunEnd,
+};
 
 static bool s_valid_run = false;
 static bool s_is_romhack = false;
@@ -40,20 +49,34 @@ void tick() {
     }
 }
 
+bool show_in_story() {
+    u8 story_pref = pref::get(pref::U8Pref::IlMarkStory);
+    switch (StoryIlMarkSettings(story_pref)) {
+        case StoryIlMarkSettings::DontShow:
+            return false;
+        case StoryIlMarkSettings::AtRunEnd:
+            // show the mark if at least one timer related pref is on and if we've finished the run
+            return !storyreset::all_loadless_timer_prefs_off() && goal::is_run_complete();
+        case StoryIlMarkSettings::AlwaysInStory:
+            return true;
+    }
+}
+
 bool is_ilmark_enabled() {
     if (mkb::main_mode != mkb::MD_GAME) return false;
+
+    // If in a romhack and the pref is off, don't show any validation marks whatsoever
+    if (s_is_romhack && !pref::get(pref::BoolPref::IlMarkRomhacks)) {
+        return false;
+    }
 
     if (mkb::main_game_mode == mkb::PRACTICE_MODE) {
         if (!pref::get(pref::BoolPref::IlMarkPractice)) return false;
     } else if (mkb::main_game_mode == mkb::STORY_MODE) {
-        if (!pref::get(pref::BoolPref::IlMarkStory)) return false;
+        if (!show_in_story()) return false;
     } else if (mkb::main_game_mode == mkb::CHALLENGE_MODE) {
         if (!pref::get(pref::BoolPref::IlMarkChallenge)) return false;
     } else {
-        return false;
-    }
-
-    if (s_is_romhack && !pref::get(pref::BoolPref::IlMarkRomhacks)) {
         return false;
     }
 

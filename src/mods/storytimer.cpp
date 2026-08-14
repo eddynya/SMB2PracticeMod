@@ -330,7 +330,7 @@ void disp() {
     }
 
     draw_timers();
-    draw_timer_version();
+    // draw_timer_version();
 
     if (pref::get(pref::BoolPref::ShowRunBreakdown) && goal::is_run_complete()) {
         draw_breakdown_screen();

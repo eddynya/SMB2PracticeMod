@@ -25,7 +25,7 @@ enum class BoolPref : u8 {
     Marathon,
     IlBattleDisplay,
     IlMarkPractice,
-    IlMarkStory,
+    // IlMarkStory, // changed to be a u8 pref
     IlMarkChallenge,
     HideBg,
     UnlockVanilla,
@@ -99,6 +99,7 @@ enum class U8Pref : u8 {
     SegmentTimerOptions,
     DeathCounterDisplayOptions,
     MenuAcceleration,
+    IlMarkStory,
 };
 
 void init();

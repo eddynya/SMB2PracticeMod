@@ -239,8 +239,8 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::IlBattleDisplay;
         case PrefId::IlMarkPractice:
             return BoolPref::IlMarkPractice;
-        case PrefId::IlMarkStory:
-            return BoolPref::IlMarkStory;
+        /* case PrefId::IlMarkStory:
+            return BoolPref::IlMarkStory; */
         case PrefId::IlMarkChallenge:
             return BoolPref::IlMarkChallenge;
         case PrefId::HideBg:
@@ -382,6 +382,8 @@ static std::optional<U8Pref> pref_id_to_u8_pref(PrefId id) {
             return U8Pref::SegmentTimerOptions;
         case PrefId::DeathCounterDisplayOptions:
             return U8Pref::DeathCounterDisplayOptions;
+        case PrefId::IlMarkStory:
+            return U8Pref::IlMarkStory;
         case PrefId::MenuAcceleration:
             return U8Pref::MenuAcceleration;
         default:
@@ -432,7 +434,7 @@ static DefaultU8Pref s_default_u8_prefs[] = {
 
 struct PrefState {
     u8 bool_prefs[8];
-    u8 u8_prefs[35];
+    u8 u8_prefs[36];
 };
 
 static PrefState s_pref_state, s_prev_pref_state, s_default_pref_state;

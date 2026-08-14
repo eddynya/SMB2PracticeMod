@@ -1338,6 +1338,8 @@ static Widget s_reset_ilmark_widgets[] = {
     },
 };
 
+const char* IL_MARK_STORY_OPTIONS[] = {"Off", "Always", "Run End"};
+
 static Widget s_il_mark_widgets[] = {
     {
         .type = WidgetType::Header,
@@ -1361,11 +1363,13 @@ static Widget s_il_mark_widgets[] = {
             },
     },
     {
-        .type = WidgetType::Checkbox,
-        .checkbox =
+        .type = WidgetType::Choose,
+        .choose =
             {
                 .label = "Story Mode",
-                .pref = pref::BoolPref::IlMarkStory,
+                .choices = IL_MARK_STORY_OPTIONS,
+                .num_choices = LEN(IL_MARK_STORY_OPTIONS),
+                .pref = pref::U8Pref::IlMarkStory,
             },
     },
     {
