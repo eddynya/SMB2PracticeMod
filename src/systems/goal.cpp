@@ -20,10 +20,10 @@ constexpr u8 TIME_BETWEEN_TAPE_BREAK_AND_GOAL_SUBMODE = 3;
 static u8 s_frames_until_goal_submode = 0;
 
 // Various goal flags that get set to true on goal tape break (and stay true during postgoal), but
-// get unset at different times
+// get unset at different times. Having different flags actually does have utility for us (see the
+// is_between_worlds() function below and the associated notes)
 static bool s_goal_flag_game_return;  // Unset after game scenario return
-static bool s_goal_flag_exit_game;    // Unset outside of exit game or game scenario return
-static bool s_goal_flag_retry;        // Unset on spin in (or gameplay pre tape break)
+static bool s_goal_flag_exit_game;    // Unset outside of exit game and game scenario return
 static bool s_goal_flag_last_stage;  // Unset on spin in, gameplay pre tape break, and game scenario
                                      // main
 
@@ -33,7 +33,6 @@ static patch::Tramp<decltype(&mkb::mode_tick)> s_mode_tick_tramp;
 u8 get_frames_until_goal_submode() { return s_frames_until_goal_submode; }
 bool get_goal_flag_game_return() { return s_goal_flag_game_return; }
 bool get_goal_flag_exit_game() { return s_goal_flag_exit_game; }
-bool get_goal_flag_retry() { return s_goal_flag_retry; }
 bool get_goal_flag_last_stage() { return s_goal_flag_last_stage; }
 
 // Important note on run order
@@ -42,13 +41,12 @@ bool get_goal_flag_last_stage() { return s_goal_flag_last_stage; }
 // (2) mkb::mode_tick() (changes the submode)
 // (3) mkb::did_ball_enter_goal()
 // (4) mkb::get_world_unbeaten_stage_count() (used to determine clear count, and if we're between
-//     worlds/at the end of a story mode run)
+//     worlds/at the end of a story mode run. Increments after game scenario return)
 // (5) mkb::draw_debugtext (what prac mod disp() functions hook)
 
 void set_goal_flags() {
     s_goal_flag_game_return = true;
     s_goal_flag_exit_game = true;
-    s_goal_flag_retry = true;
     s_goal_flag_last_stage = true;
 }
 
@@ -60,36 +58,7 @@ bool is_postgoal_exact() {
 
 bool is_gameplay_exact() { return mode::is_gameplay(mkb::sub_mode) && !is_postgoal_exact(); }
 
-void unset_goal_flags() {
-    if (!is_postgoal_exact()) {
-        if (!mode::is_game_scenario_return(mkb::sub_mode)) {
-            s_goal_flag_game_return = false;
-        }
-        if (!(mode::is_game_scenario_return(mkb::sub_mode) ||
-              mode::is_story_exit_game(mkb::sub_mode))) {
-            s_goal_flag_exit_game = false;
-        }
-        if (mode::is_spin_in_init(mkb::sub_mode) || is_gameplay_exact()) {
-            s_goal_flag_retry = false;
-        }
-        if (mode::is_spin_in_init(mkb::sub_mode) || is_gameplay_exact() ||
-            mode::is_game_scenario_main(mkb::sub_mode)) {
-            s_goal_flag_last_stage = false;
-        }
-    }
-}
-
-void reset_tape_break_counter() {
-    // Handle cases where we load state or pause (and either leave the stage or retry) immediately
-    // after breaking the tape
-    // This gets run after mkb::mode_tick ie after the game uppdates the submode
-    // Because of the run order notes mentioned earlier, this always runs after savest_ui's tick
-    if (mode::is_stage_exit_init(mkb::sub_mode) || libsavest::state_loaded_this_frame() ||
-        mode::is_spin_in_init(mkb::sub_mode)) {
-        s_frames_until_goal_submode = 0;
-    }
-}
-
+// When entering the goal, set our flags to true and start the frames until goal submode timer
 bool did_ball_enter_goal_hook(mkb::Ball* ball, int* out_stage_goal_idx, int* out_itemgroup_id,
                               mkb::byte* out_goal_flags) {
     bool result = s_goal_tramp.dest(ball, out_stage_goal_idx, out_itemgroup_id, out_goal_flags);
@@ -106,12 +75,43 @@ bool did_ball_enter_goal_hook(mkb::Ball* ball, int* out_stage_goal_idx, int* out
     return result;
 }
 
+// We also need to handle properly zeroing the timer and  unsetting our flags in the appropriate
+// submodes
+
+void reset_tape_break_counter() {
+    // Handle cases where we load state or pause (and either leave the stage or retry) immediately
+    // after breaking the tape
+    // This gets run after mkb::mode_tick ie after the game uppdates the submode
+    // Because of the run order notes mentioned earlier, this always runs after savest_ui's tick,
+    // which means that at the end of the frame that we load the state, s_frames_until_goal_submode
+    // will be 0
+    if (mode::is_stage_exit_init(mkb::sub_mode) || libsavest::state_loaded_this_frame() ||
+        mode::is_spin_in_init(mkb::sub_mode)) {
+        s_frames_until_goal_submode = 0;
+    }
+}
+
+void unset_goal_flags() {
+    if (!is_postgoal_exact()) {
+        if (!mode::is_game_scenario_return(mkb::sub_mode)) {
+            s_goal_flag_game_return = false;
+        }
+        if (!(mode::is_game_scenario_return(mkb::sub_mode) ||
+              mode::is_story_exit_game(mkb::sub_mode))) {
+            s_goal_flag_exit_game = false;
+        }
+        if (mode::is_spin_in_init(mkb::sub_mode) || is_gameplay_exact() ||
+            mode::is_game_scenario_main(mkb::sub_mode)) {
+            s_goal_flag_last_stage = false;
+        }
+    }
+}
+
 void mode_tick_hook() {
     s_mode_tick_tramp.dest();
     // Run this after the game updates the submode
-    // This ensures that our flags that should get unset during game scenario main
-    // get unset after the submode switch (and so there isn't a frame where they
-    // are true when they shouldn't be)
+    // This ensures that our flags that should get unset during a submode switch don't get delayed
+    // by a frame
     reset_tape_break_counter();
     unset_goal_flags();
 }
@@ -121,17 +121,15 @@ void init() {
     patch::hook_function(s_mode_tick_tramp, mkb::mode_tick, mode_tick_hook);
 }
 
-// Notes about loading state right after goal and s_frames_until_goal_submode being 0, not 1
-
 // --- story mode status functions based on goal checks (is_between_worlds(), is_run_complete()) ---
 
 // Important note: mode::get_clear_count_for_world() is based off
 // mkb::get_world_unbeaten_stage_count(), which only increments after game scenario return ends
-// This is why it's very important to be careful about the behavior of our flag on the game scenario
-// return frame (this ensures our timer/deathcounter won't flash/disappear for a frame when the
-// "Between Worlds" pref is enabled)
-// Due to the run order notes earlier, when the submode switches to game scenario main, first our
-// flag gets updated, then the clear count increments, and then disp() functions run
+// This is why it's important to make sure our flags aren't being unset 1 frame late when the
+// submode switches to game scenario main (this ensures our timer/deathcounter won't flash/disappear
+// for a frame when the "Between Worlds" pref is enabled). Due to the run order notes earlier, when
+// the submode switches to game scenario main, first our flag gets updated, then the clear count
+// increments, and then disp() functions run
 
 // To allow for the possibility of passing in different goal flags, we phrase the next function
 // using a generic bool argument
@@ -147,13 +145,15 @@ bool is_between_worlds_main(bool goal_flag) {
 
 // The reason we use different flags depending on if we're on the last world or not is for the
 // following behavior:
-// (1) If we exit game after completing the last stage and then return to the menu, we want our run
-// to still be flagged as complete (so that we know we should reset the run instead of running the
-// timer, due to how we handle resetting/not resetting the run if we fully exit game)
+// (1) If we exit game after completing the last stage in W10 and then return to the menu, we want
+// our run to still be flagged as complete (so that we know we should reset the run instead of
+// running the timer, due to how we handle resetting/not resetting the run if we fully exit game)
 // (2) We can't use s_goal_flag_last_stage for every world, however, because of the possibility of
 // doing an accidental (full) exit game all the way back out to the menus on the last stage of a
-// world. If this happens, the game doesn't count the stage as cleared and you would need to reclear
-// it. Using different flags solves this edge case behavior
+// (non world 10) world. If this happens, the game doesn't count the stage as cleared and you would
+// need to reclear it. In this case, the correct behavior would be to continue running the segment
+// timer on the menus and not consider us to be between worlds. Using different goal flags solves
+// this edge case behavior
 
 bool is_between_worlds() {
     u8 curr_world = mkb::scen_info.world;

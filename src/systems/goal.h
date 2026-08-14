@@ -7,7 +7,6 @@ namespace goal {
 u8 get_frames_until_goal_submode();
 bool get_goal_flag_game_return();
 bool get_goal_flag_exit_game();
-bool get_goal_flag_retry();
 bool get_goal_flag_last_stage();
 
 bool is_postgoal_exact();
