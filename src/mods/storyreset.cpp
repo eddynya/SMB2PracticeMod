@@ -1,6 +1,7 @@
 #include "storyreset.h"
 
 #include "../systems/goal.h"
+#include "../systems/pref.h"
 #include "../utils/draw.h"
 #include "../utils/mode.h"
 #include "gotostory.h"
@@ -71,7 +72,7 @@ menu != mkb::MENUSCREEN_CHARACTER_SELECT_2 ||
 // allowable menu screen ids
 // 7 (main game sel), 6 (char sel), 12 (file screen init?)
 
-// If we select practice mode, challenge mode, or go back to the main menu
+// If we select challenge mode, practice mode, or go back to the main menu
 bool is_on_wrong_menu() {
     if (mode::is_sel_ngc_main(mkb::sub_mode)) {
         mkb::MenuScreenID menu = mkb::g_currently_visible_menu_screen;
@@ -102,12 +103,77 @@ void tick() {
     }
 }
 
-void display_reset_run_message() {
-    // TODO: pref
-    draw::notify(draw::WHITE, "Run was reset");
+bool all_loadless_timer_prefs_off() {
+    StoryDisplayOptions fullgame_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::FullgameTimerOptions));
+    StoryDisplayOptions segment_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::SegmentTimerOptions));
+    bool breakdown_pref = pref::get(pref::BoolPref::ShowRunBreakdown);
+
+    return fullgame_pref == StoryDisplayOptions::DontShow &&
+           segment_pref == StoryDisplayOptions::DontShow && !breakdown_pref;
 }
 
-// TODO: message when run is reset
-void disp() {}
+bool death_counter_pref_off() {
+    StoryDisplayOptions death_counter_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::DeathCounterDisplayOptions));
+    return death_counter_pref == StoryDisplayOptions::DontShow;
+}
+
+bool displaying_on_menus_during_accidental_exit_game() {
+    StoryDisplayOptions fullgame_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::FullgameTimerOptions));
+    StoryDisplayOptions segment_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::SegmentTimerOptions));
+    StoryDisplayOptions death_counter_pref =
+        StoryDisplayOptions(pref::get(pref::U8Pref::DeathCounterDisplayOptions));
+    return fullgame_pref == StoryDisplayOptions::AlwaysShow ||
+           segment_pref == StoryDisplayOptions::AlwaysShow ||
+           death_counter_pref == StoryDisplayOptions::AlwaysShow;
+}
+
+bool run_active_but_not_displaying_on_menus() {
+    return !displaying_on_menus_during_accidental_exit_game() &&
+           !(all_loadless_timer_prefs_off() && death_counter_pref_off());
+}
+bool is_silent_reset_type() { return should_reset_on_file_screen() || is_on_wrong_menu(); }
+
+void display_reset_run_message() {
+    if (pref::get(pref::BoolPref::HideRunResetMessaage)) {
+        return;
+    }
+
+    // If the hide run reset message pref is off, we still want to be "minimal" with displaying it
+    // So, we only display a reset message if:
+    // (1) it's a less obvious reset trigger (eg not go to story)
+    // (2) at least one timer/death counter pref is on (don't bother displaying a reset message if
+    // everything is turned off)
+    // (3) if the player has no timer/death counter prefs on that would be displaying when on the
+    // menus during an accidental exit game (eg "Between Worlds" or "End of Run")
+
+    if (!is_silent_reset_type()) {
+        return;
+    }
+
+    if (all_loadless_timer_prefs_off() && death_counter_pref_off()) {
+        return;
+    }
+
+    if (displaying_on_menus_during_accidental_exit_game()) {
+        return;
+    }
+
+    // is_silent_reset_type() && !run_active_but_not_displaying_on_menus()
+    /* if ((!is_silent_reset_type() || !run_active_but_not_displaying_on_menus())) {
+        return;
+    } */
+
+    // && death_counter_pref_off()
+    /* if (all_loadless_timer_prefs_off()) {
+        return;
+    } */
+
+    draw::notify(draw::WHITE, "Run was reset");
+}
 
 }  // namespace storyreset
