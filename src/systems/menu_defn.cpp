@@ -840,6 +840,14 @@ static Widget s_loadless_timers_widgets[] = {
                 .pref = pref::BoolPref::ShowRunBreakdown,
             },
     },
+    {
+        .type = WidgetType::Checkbox,
+        .checkbox =
+            {
+                .label = "Hide Reset Message",
+                .pref = pref::BoolPref::HideRunResetMessaage,
+            },
+    },
 };
 
 static const char* DEATH_COUNTER_OPTIONS[] = {

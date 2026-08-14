@@ -59,6 +59,7 @@ enum class BoolPref : u8 {
     ShowRunBreakdown,
     // ShowDeathCounter,
     CountFirstStageDeaths,
+    HideRunResetMessaage,
     // MenuAcceleration,
 };
 

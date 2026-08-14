@@ -106,7 +106,8 @@ enum class PrefId : u16 {
     ShowRunBreakdown = 86,
     CountFirstStageDeaths = 87,
     DeathCounterDisplayOptions = 88,
-    MenuAcceleration = 89,  // check with rehtrop if 88 is free
+    HideRunResetMessaage = 89,
+    MenuAcceleration = 90,
 };
 
 // Verbatim list of preference IDs we iterate over when writing savefile back out
@@ -196,6 +197,7 @@ static const PrefId s_pref_ids[] = {
     PrefId::ShowRunBreakdown,
     PrefId::CountFirstStageDeaths,
     PrefId::DeathCounterDisplayOptions,
+    PrefId::HideRunResetMessaage,
     PrefId::MenuAcceleration,
 };
 
@@ -303,6 +305,8 @@ static std::optional<BoolPref> pref_id_to_bool_pref(PrefId id) {
             return BoolPref::CountFirstStageDeaths;
         case PrefId::ShowRunBreakdown:
             return BoolPref::ShowRunBreakdown;
+        case PrefId::HideRunResetMessaage:
+            return BoolPref::HideRunResetMessaage;
         default:
             return {};
     }
@@ -402,6 +406,7 @@ static BoolPref s_default_on_bool_prefs[] = {
     BoolPref::CustomPhysicsDisp,
     BoolPref::ShowRunBreakdown,
     BoolPref::CountFirstStageDeaths,
+    BoolPref::HideRunResetMessaage,
 };
 
 struct DefaultU8Pref {
