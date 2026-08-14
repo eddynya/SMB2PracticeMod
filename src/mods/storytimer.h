@@ -4,12 +4,12 @@
 
 namespace storytimer {
 
-enum class TimerOptions {
+/* enum class TimerOptions {
     DontShow = 0,
     AlwaysShow = 1,
     BetweenWorlds = 2,
     EndOfRun = 3,
-};
+}; */
 
 enum class TimerType {
     Fullgame,

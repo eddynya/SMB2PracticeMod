@@ -4,12 +4,12 @@
 
 namespace deathcounter {
 
-enum class DeathCounterOptions {
+/* enum class DeathCounterOptions {
     DontShow = 0,
     AlwaysShow = 1,
     BetweenWorlds = 2,
     EndOfRun = 3,
-};
+}; */
 
 u32 get_total_death_count();
 u32 get_world_death_count(u16 world_idx);

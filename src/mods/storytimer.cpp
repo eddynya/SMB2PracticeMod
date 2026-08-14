@@ -35,6 +35,10 @@ constexpr u16 STAGES_PER_WORLD = mode::STAGES_PER_WORLD;
 static TimerGroup s_timer_group[WORLD_COUNT];  // timer info for each world
 static bool s_displayed_timer_mark_this_run = false;
 
+// using TimerOptions = storyreset::TimerOptions;
+// typedef storyreset::StoryDisplayOptions TimerOptions;
+// using TimerOptions = storyreset::StoryDisplayOptions;
+
 // --- some getters that other files can use (if needed) ---
 
 TimerGroup get_world_timer_info(u16 world_idx) {
@@ -155,6 +159,8 @@ bool should_display_timer(TimerType type) {
     } else {  // Segment timer
         pref = pref::get(pref::U8Pref::SegmentTimerOptions);
     }
+
+    using TimerOptions = storyreset::StoryDisplayOptions;
 
     switch (TimerOptions(pref)) {
         case TimerOptions::AlwaysShow:
@@ -286,18 +292,14 @@ void draw_breakdown_screen() {  // TODO: totals row?
     }
 }
 
+// maybe should be in its own file like with ilmark.cpp?
 void draw_timer_version() {
-    TimerOptions fullgame_pref = TimerOptions(pref::get(pref::U8Pref::FullgameTimerOptions));
-    TimerOptions segment_pref = TimerOptions(pref::get(pref::U8Pref::SegmentTimerOptions));
-    bool breakdown_pref = pref::get(pref::BoolPref::ShowRunBreakdown);
-
     if (s_displayed_timer_mark_this_run) {
         return;
     }
 
     // If any of our timer prefs are enabled and we haven't displayed yet, display
-    if (fullgame_pref != TimerOptions::DontShow || segment_pref != TimerOptions::DontShow ||
-        breakdown_pref) {
+    if (!storyreset::all_loadless_timer_prefs_off()) {
         if (goal::is_run_complete() && !s_displayed_timer_mark_this_run) {
             char version_buf[16] = {};
             mkb::sprintf(version_buf, "Timer v%d.%d.%d", LOADLESS_TIMER_VERSION.major,
@@ -334,14 +336,17 @@ void disp() {
         draw_breakdown_screen();
     }
 
-    /*  u16 pos_y = get_timer_y_pos(TimerType::Segment);
+    /*  u32 val = patch::view_word(reinterpret_cast<void*>(0x8090dbd0));
+     u32 new_val = val & 0x0000ffff;
+
+     u16 pos_y = get_timer_y_pos(TimerType::Segment);
 
      timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 1, SEGMENT_TIMER_TEXT_OFFSET,
-                           "Mar:", 60 * s_displayed_timer_mark_this_run, true, draw::WHITE);
+                           "Scn:", 60 * mkb::scen_info.next_world, true, draw::WHITE);
      timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 2, SEGMENT_TIMER_TEXT_OFFSET,
-                           "Gsr:", 60 * goal::get_goal_flag_game_return(), true, draw::WHITE);
+                           "Sub:", 60 * mkb::scen_info.world, true, draw::WHITE);
      timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 3, SEGMENT_TIMER_TEXT_OFFSET,
-                           "Ext:", 60 * goal::get_goal_flag_exit_game(), true, draw::WHITE);
+                           "aaa:", 60 * new_val, true, draw::WHITE);
      timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 4, SEGMENT_TIMER_TEXT_OFFSET,
                            "Lst:", 60 * goal::get_goal_flag_last_stage(), true, draw::WHITE);
      timerdisp::draw_timer(SEGMENT_TIMER_LOCATION_X, pos_y + 5, SEGMENT_TIMER_TEXT_OFFSET,
@@ -351,7 +356,7 @@ void disp() {
 }
 
 // for easier timer testing
-static patch::Tramp<decltype(&mkb::fade_screen_to_color)> s_fade_screen_to_color_tramp;
+// static patch::Tramp<decltype(&mkb::fade_screen_to_color)> s_fade_screen_to_color_tramp;
 static patch::Tramp<decltype(&mkb::g_handle_storymode_stageselect_state)>
     s_g_handle_storymode_stageselect_state_tramp;
 

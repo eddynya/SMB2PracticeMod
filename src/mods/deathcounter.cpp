@@ -110,6 +110,9 @@ void tick() {
 
 bool should_display_death_counter() {
     u8 pref = pref::get(pref::U8Pref::DeathCounterDisplayOptions);
+
+    using DeathCounterOptions = storyreset::StoryDisplayOptions;
+
     switch (DeathCounterOptions(pref)) {
         case DeathCounterOptions::AlwaysShow:
             return true;
