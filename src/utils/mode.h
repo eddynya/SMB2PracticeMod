@@ -43,16 +43,18 @@ bool is_story_exit_game(mkb::SubMode submode);
 bool is_stage_exit_init(mkb::SubMode submode);
 bool is_stage_exit_submode(mkb::SubMode submode);
 
-// 10 ball screen stuff + misc storymode stuff
+// 10 ball screen stuff
 
 bool is_on_10_ball_spin_in(mkb::StoryModeStageSelectState state);
 bool is_idle_on_10_ball_screen(mkb::StoryModeStageSelectState state);
 bool has_selected_stage_on_10_ball_screen_init(mkb::StoryModeStageSelectState state);
 bool has_selected_stage_on_10_ball_screen(mkb::StoryModeStageSelectState state);
 
-bool is_main_game_mode_story(mkb::MainGameMode main_game_mode);
-
 bool is_on_10_ball_screen(mkb::SubMode sub_mode, mkb::ScenInfo scen_info);
+
+// Other storymode stuff
+
+bool is_main_game_mode_story(mkb::MainGameMode main_game_mode);
 
 bool is_storymode_file_screen_init(mkb::ScenInfo scen_info);
 bool is_storymode_file_screen_main(mkb::ScenInfo scen_info);
