@@ -6,6 +6,7 @@
 #include "../systems/pref.h"
 #include "../utils/draw.h"
 #include "../utils/libsavest.h"
+#include "../utils/macro_utils.h"
 #include "../utils/mode.h"
 #include "../utils/patch.h"
 #include "../utils/timerdisp.h"
@@ -33,7 +34,10 @@ u32 get_total_death_count() {
     return total;
 }
 
-u32 get_world_death_count(u16 world_idx) { return s_world_death_count[world_idx]; }
+u32 get_world_death_count(u16 world_idx) {
+    u16 clamped_idx = MIN(world_idx, WORLD_COUNT - 1);  // clamp for safety
+    return s_world_death_count[clamped_idx];
+}
 
 void increment_world_death_counter() {
     // Check the pref for count first stage deaths and if we're on the first stage
@@ -45,17 +49,17 @@ void increment_world_death_counter() {
     s_can_incr_death_counter = false;
 }
 
-void reset_flags() { s_can_incr_death_counter = false; }
+void reset_flag() { s_can_incr_death_counter = false; }
 
 void reset_death_counters() {
     for (u16 k = 0; k < WORLD_COUNT; k++) {
         s_world_death_count[k] = 0;
     }
-    reset_flags();
+    reset_flag();
 }
 
 // When we're done holding the savestate button/when gameplay resumes
-void update_flags_on_state_release() {
+void update_flag_on_state_release() {
     if (goal::is_gameplay_exact() && !libsavest::state_loaded_this_frame()) {
         // As soon as we're done holding the load state button (or just any time we're controlling
         // the monkey on the stage), we're allowed to die
@@ -63,16 +67,16 @@ void update_flags_on_state_release() {
     }
 }
 
-bool should_increment_normal_death_counter() {
+bool should_count_as_normal_death() {
     bool retried_without_clearing =
         (mode::is_spin_in_init(mkb::sub_mode) && s_can_incr_death_counter);
     bool left_stage_without_clearing =
         mode::is_stage_exit_submode(mkb::sub_mode) && s_can_incr_death_counter;
     bool died = mode::is_death_init(mkb::sub_mode);
-    return (retried_without_clearing || left_stage_without_clearing || died);
+    return retried_without_clearing || left_stage_without_clearing || died;
 }
 
-bool should_increment_savestate_death_counter() {
+bool should_count_as_savestate_death() {
     return libsavest::state_loaded_this_frame() && s_can_incr_death_counter;
 }
 
@@ -81,11 +85,11 @@ void count_deaths() {
         s_can_incr_death_counter = false;
     }
 
-    if (should_increment_normal_death_counter()) {
+    if (should_count_as_normal_death()) {
         increment_world_death_counter();
     }
 
-    if (should_increment_savestate_death_counter()) {
+    if (should_count_as_savestate_death()) {
         increment_world_death_counter();
     }
 }
@@ -95,13 +99,13 @@ void tick() {
         reset_death_counters();
     }
 
-    // Whenever entering a new stage, reset our flags
+    // Whenever entering a new stage, reset our flag
     if (mode::is_spin_in_first_init(mkb::sub_mode)) {
-        reset_flags();
+        reset_flag();
     }
 
     count_deaths();
-    update_flags_on_state_release();
+    update_flag_on_state_release();
 }
 
 bool should_display_death_counter() {
