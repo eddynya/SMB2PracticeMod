@@ -9,16 +9,15 @@
 #include "../utils/macro_utils.h"
 #include "../utils/mode.h"
 #include "../utils/patch.h"
-#include "../utils/timerdisp.h"
+#include "../utils/timerdisp.h"  // for testing
 #include "freecam.h"
 #include "storyreset.h"
-#include "validate.h"
 
 namespace deathcounter {
 
 constexpr u16 COUNTER_DISPLAY_Y_POS = 56;
 constexpr u16 COUNTER_DISPLAY_X_POS = 18;
-constexpr u16 COUNTER_NUMBER_X_POS = COUNTER_DISPLAY_X_POS + 8 * 10;
+constexpr u16 COUNTER_NUMBER_X_POS = COUNTER_DISPLAY_X_POS + 7 * draw::DEBUG_CHAR_WIDTH;
 
 constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 

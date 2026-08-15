@@ -18,14 +18,10 @@
 
 namespace storytimer {
 
-constexpr Vec2d TIMER_VER_POS = {450, 24 + 16 * 25};  // {634, 464}
-constexpr Vec2d TIMER_VER_SCALE = {0.8, 0.8};
-constexpr mkb::SpriteAlignment TIMER_VER_ALIGNMENT = mkb::ALIGN_UPPER_LEFT;
-
 constexpr u16 FULLGAME_TIMER_LOCATION_X = 18 + 24;
-constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 56;
+constexpr u16 FULLGAME_TIMER_TEXT_OFFSET = 5 * draw::DEBUG_CHAR_WIDTH;
 constexpr u16 SEGMENT_TIMER_LOCATION_X = 30 + 24;
-constexpr u16 SEGMENT_TIMER_TEXT_OFFSET = 44;
+constexpr u16 SEGMENT_TIMER_TEXT_OFFSET = 4 * draw::DEBUG_CHAR_WIDTH;
 constexpr u16 BREAKDOWN_ROW_LOCATION_X = 42 + 24;
 constexpr u16 STARTING_ROW = 2;
 
@@ -33,11 +29,6 @@ constexpr u16 WORLD_COUNT = mode::WORLD_COUNT;
 constexpr u16 STAGES_PER_WORLD = mode::STAGES_PER_WORLD;
 
 static TimerGroup s_timer_group[WORLD_COUNT];  // timer info for each world
-static bool s_displayed_timer_mark_this_run = false;
-
-// using TimerOptions = storyreset::TimerOptions;
-// typedef storyreset::StoryDisplayOptions TimerOptions;
-// using TimerOptions = storyreset::StoryDisplayOptions;
 
 // --- some getters that other files can use (if needed) ---
 
@@ -71,7 +62,6 @@ void reset_timer() {
         }
         storyreset::reset_active_run_info();
         storyreset::display_reset_run_message();
-        s_displayed_timer_mark_this_run = false;
         // mkb::OSReport("Reset timer \n");
     }
 }
@@ -292,25 +282,6 @@ void draw_breakdown_screen() {  // TODO: totals row?
     }
 }
 
-// maybe should be in its own file like with ilmark.cpp?
-void draw_timer_version() {
-    if (s_displayed_timer_mark_this_run) {
-        return;
-    }
-
-    // If any of our timer prefs are enabled and we haven't displayed yet, display
-    if (!storyreset::all_loadless_timer_prefs_off()) {
-        if (goal::is_run_complete() && !s_displayed_timer_mark_this_run) {
-            char version_buf[16] = {};
-            mkb::sprintf(version_buf, "Timer v%d.%d.%d", LOADLESS_TIMER_VERSION.major,
-                         LOADLESS_TIMER_VERSION.minor, LOADLESS_TIMER_VERSION.patch);
-            draw::notify_with_guard_and_y_pos(0, true, draw::GRAY, version_buf);
-
-            s_displayed_timer_mark_this_run = true;
-        }
-    }
-}
-
 bool should_not_display_timer_at_all() {
     u32 loadless_time = get_loadless_time();
     // The only time we can ever display the timer outside of story mode is
@@ -330,7 +301,6 @@ void disp() {
     }
 
     draw_timers();
-    // draw_timer_version();
 
     if (pref::get(pref::BoolPref::ShowRunBreakdown) && goal::is_run_complete()) {
         draw_breakdown_screen();

@@ -21,14 +21,6 @@ struct TimerGroup {
     u32 full_world;  // the time taken to complete a world until the fade to white on the last stage
 };
 
-struct TimerVersion {
-    u16 major;
-    u16 minor;
-    u16 patch;
-};
-
-constexpr TimerVersion LOADLESS_TIMER_VERSION = {0, 2, 0};
-
 TimerGroup get_world_timer_info(u16 world_idx);
 u32 get_split_timer_for_world(u16 world_idx);
 u32 get_loadless_time();

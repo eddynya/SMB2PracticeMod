@@ -1,11 +1,9 @@
 #include "goal.h"
 
 #include "../mkb/mkb.h"
-// #include "../utils/draw.h"
 #include "../utils/libsavest.h"
 #include "../utils/mode.h"
 #include "../utils/patch.h"
-// #include "../utils/timerdisp.h"
 
 namespace goal {
 

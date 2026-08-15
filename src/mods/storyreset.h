@@ -4,26 +4,15 @@
 
 namespace storyreset {
 
-/* enum class TimerOptions {
-    DontShow = 0,
-    AlwaysShow = 1,
-    BetweenWorlds = 2,
-    EndOfRun = 3,
-}; */
-
 // Does it make more sense to move this enum class to pref.h?
 // We need this enum class in storyreset.cpp, but we also need it in both deathcounter.cpp and
 // storytimer.cpp
 enum class StoryDisplayOptions {
-    DontShow = 0,
-    AlwaysShow = 1,
-    BetweenWorlds = 2,
-    EndOfRun = 3,
+    DontShow,
+    AlwaysShow,
+    BetweenWorlds,
+    EndOfRun,
 };
-
-// Loadless timer and deathcounter share the same display options! type alias them:
-// using TimerOptions = StoryDisplayOptions;
-// using DeathCounterOptions = StoryDisplayOptions;
 
 bool is_run_active();
 void set_run_active_status(bool is_active);

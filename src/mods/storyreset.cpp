@@ -64,14 +64,6 @@ bool should_reset_on_file_screen() {
     return false;
 }
 
-/*
-menu != mkb::MENUSCREEN_CHARACTER_SELECT_2 ||
-            menu != mkb::MENUSCREEN_MAIN_GAME_SELECT ||
-            menu != mkb::MENUSCREEN_STORY_MODE_SELECTED || menu != mkb::MENUSCREEN_MODE_SELECT
-*/
-// allowable menu screen ids
-// 7 (main game sel), 6 (char sel), 12 (file screen init?)
-
 // If we select challenge mode, practice mode, or go back to the main menu
 bool is_on_wrong_menu() {
     if (mode::is_sel_ngc_main(mkb::sub_mode)) {
@@ -95,6 +87,8 @@ bool should_reset_run() {
     return should_reset_on_file_screen() || is_on_wrong_menu() || used_go_to_story() ||
            should_reset_completed_run();
 }
+
+// TODO: reset run if selecting active file and active file has 0 stages cleared?
 
 void tick() {
     if (mode::is_main_game_mode_story(mkb::main_game_mode) &&
@@ -173,7 +167,7 @@ void display_reset_run_message() {
         return;
     } */
 
-    draw::notify(draw::WHITE, "Run was reset");
+    draw::notify(draw::WHITE, "Run Was Reset");
 }
 
 }  // namespace storyreset
