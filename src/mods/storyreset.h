@@ -13,6 +13,10 @@ enum class StoryDisplayOptions {
     BetweenWorlds,
     EndOfRun,
 };
+// The fullgame loadless timer and death counter share the same display options. The loadless
+// segment timer options are a subset of this enum class (everything except an EndOfRun setting),
+// and the segment timer options show up in the same order in the menu as the corresponding fullgame
+// one, so we don't need to make a separate enum class for it
 
 bool is_run_active();
 void set_run_active_status(bool is_active);

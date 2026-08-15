@@ -173,10 +173,10 @@ bool should_display_timer(TimerType type) {
         case TimerOptions::EndOfRun:
             if (type == TimerType::Fullgame) {
                 return goal::is_run_complete();
-            } else if (pref::get(pref::BoolPref::ShowRunBreakdown)) {
-                return false;
             } else {
-                return goal::is_run_complete();
+                // We don't have an end of run pref for the segment timer (since it doesn't really
+                // make sense to have one)
+                return false;
             }
         case TimerOptions::DontShow:
             return false;
